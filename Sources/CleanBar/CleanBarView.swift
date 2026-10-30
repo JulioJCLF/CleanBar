@@ -109,7 +109,7 @@ public struct CleanBarView: View {
                     Text("CleanBar")
                         .font(.system(size: 14, weight: .bold, design: .rounded))
                         .foregroundColor(.primary)
-                    Text("Workspace & Deep Clean")
+                    Text("Smart System Janitor")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(.secondary)
                 }
@@ -247,10 +247,10 @@ public struct CleanBarView: View {
             .padding(12)
             .glassCard()
             
-            // Video Pipeline Card
+            // Media & Large Files Card
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Label("Pipeline de Mídia", systemImage: "film.stack")
+                    Label("Mídia & Arquivos Grandes", systemImage: "film.stack")
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .foregroundColor(.primary)
                     Spacer()
@@ -304,10 +304,10 @@ public struct CleanBarView: View {
             .padding(12)
             .glassCard()
             
-            // Dev Workspace Card
+            // Projects & Heavy Folders Card
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Label("Projetos Dev", systemImage: "chevron.left.forwardslash.chevron.right")
+                    Label("Projetos & Pastas Pesadas", systemImage: "folder.badge.gearshape")
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .foregroundColor(.primary)
                     Spacer()

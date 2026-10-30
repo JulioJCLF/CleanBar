@@ -2,8 +2,8 @@
 
 # 🍏 CleanBar
 
-### *The Native Glassmorphic Menu Bar Janitor for macOS*
-**Engineered for video creators and developers living on compact SSDs.**
+### *The Native, Zero-Bloat Menu Bar Cleaner & System Monitor for macOS*
+**Reclaim gigabytes of hidden storage, eliminate runaway CPU hogs, and keep your Mac running at peak speed.**
 
 [![Release](https://img.shields.io/github/v/release/JulioJCLF/CleanBar?style=for-the-badge&color=00c8ff)](https://github.com/JulioJCLF/CleanBar/releases/latest)
 [![macOS](https://img.shields.io/badge/macOS-13.0%2B-blue?style=for-the-badge&logo=apple)](https://github.com/JulioJCLF/CleanBar)
@@ -18,35 +18,39 @@
 <br/>
 <br/>
 
-**[Download Latest Release (Universal DMG/ZIP)](https://github.com/JulioJCLF/CleanBar/releases/latest)**
+**[Download Latest Release (macOS Universal)](https://github.com/JulioJCLF/CleanBar/releases/latest)**
 
 </div>
 
 ---
 
-## 💡 Why CleanBar?
+## 💡 The Problem with Modern Mac Cleaners
 
-If you create content (YouTube, TikTok, Reels) and write code on a MacBook with a 256 GB or 512 GB SSD, you know the daily struggle:
+Over time, everyday macOS usage silently clutters your storage:
+- **Application & Browser Caches** (`~/Library/Caches`) quietly swell into tens of gigabytes.
+- **Media Scratch Files & Exports** leave behind massive temporary caches.
+- **Developer & Workspace Dependencies** (`node_modules`, Next.js `.next`, Rust `target/`) take up storage across inactive folders.
+- **Orphaned Daemons & Runaway Background Tasks** peg CPU cores, causing system heat and draining battery life.
 
-- **Video editing caches** (`work/` folders, scratch files, ProRes `.mov` exports) silently steal 10 to 30 GB per shoot.
-- **Development dependencies** (`node_modules`, Next.js `.next/cache`, Rust `target/`) accumulate tens of gigabytes across forgotten projects.
-- **Application caches & AI tool logs** clutter system directories without warning.
-- **Runaway background daemons** quietly peg CPU cores, heat up your Mac, and drain your battery.
+Most utilities designed to solve this are either **heavy Electron applications** (running an entire Chromium browser in background consuming 300+ MB of RAM) or lock basic features behind **expensive annual subscriptions**.
 
-Most existing cleaners are **bloated Electron apps** (consuming 300+ MB of RAM just sitting in the background) or demand expensive monthly subscriptions.
-
-**CleanBar** is a 100% native **Swift 6 + SwiftUI + AppKit** utility that weighs **< 500 KB**, uses **0.0% CPU when idle**, consumes less than 45 MB of RAM, and sits elegantly in your menu bar with authentic macOS **frosted glass (Glassmorphism)**.
+### 🌟 The CleanBar Philosophy: Pure, Native & Featherlight
+**CleanBar** is built 100% in **Swift 6 + SwiftUI + AppKit**:
+- **Tiny footprint**: Less than **500 KB** total download size.
+- **Zero background overhead**: **0.0% CPU** at idle and **< 45 MB of RAM**.
+- **Authentic macOS Design**: Beautiful, responsive **Glassmorphism** popover using Apple's `.ultraThinMaterial`.
+- **100% Private & Offline**: Zero analytics, zero tracking, zero internet calls.
 
 ---
 
-## 📸 Screenshots & Feature Walkthrough
+## 📸 Core Modules
 
 <div align="center">
 
-| 📊 1. Overview & Media Pipeline | 🧼 2. Deep System Cleaning | ⚡ 3. CPU Tamer & Process Killer |
+| 📊 1. Overview & Heavy Files | 🧼 2. Deep System Cleaning | ⚡ 3. CPU Sentinel & Process Killer |
 |:---:|:---:|:---:|
-| <img src="assets/cleanbar-dashboard.png" width="280" alt="Dashboard" /> | <img src="assets/cleanbar-deepclean.png" width="280" alt="Deep Clean" /> | <img src="assets/cleanbar-processes.png" width="280" alt="CPU Tamer" /> |
-| Real-time SSD gauge, video scratch purger & node_modules tracker | Granular purge for app caches, build artifacts & stale logs | Real-time top CPU monitor with instant kill switch for runaway loops |
+| <img src="assets/cleanbar-dashboard.png" width="280" alt="Dashboard" /> | <img src="assets/cleanbar-deepclean.png" width="280" alt="Deep Clean" /> | <img src="assets/cleanbar-processes.png" width="280" alt="Deep Clean" /> |
+| Real-time SSD gauge, media cache purger & heavy directory tracker | Granular purge for app caches, build artifacts & old logs | Real-time CPU monitor with instant kill switch for runaway loops |
 
 </div>
 
@@ -54,91 +58,79 @@ Most existing cleaners are **bloated Electron apps** (consuming 300+ MB of RAM j
 
 ## ✨ Features at a Glance
 
-### 1. 📊 Overview & Media Pipeline (Dashboard)
-- **Zero-Lag Storage Gauge**: Real-time disk capacity measured directly via POSIX kernel syscalls (`statfs`) in microseconds—never freezes your WindowServer.
-- **Video Pipeline Janitor (`~/video`)**: Automatically detects completed video shoots. With one click, safely purges heavy `.mov` scratch files and `work/` proxy caches while preserving your master video, `.srt` subtitles, chapters, and thumbnails.
-- **Dev Workspace Scanner**: On-demand background scanner that locates bloated `node_modules` and lets you reclaim 5+ GB per project in one click.
-- **Quick Actions**: Instant triggers for global package pruning (`pnpm store prune`, `npm cache clean`, `brew cleanup`) and emptying the macOS Trash.
+### 1. 📊 Real-Time Storage & Heavy File Manager
+- **Zero-Lag SSD Gauge**: Reads disk metrics directly from Darwin POSIX syscalls (`statfs`) in microseconds—never freezes your menu bar or waits on slow APFS background daemons.
+- **Media & Scratch Purger**: Quickly detects video and media caches (`~/video`), purging multi-gigabyte work files and `.mov` proxies while keeping your final exports and subtitles untouched.
+- **Heavy Folder & Project Scanner**: On-demand scanner identifying heavy directory trees (like `node_modules` or local workspaces) with one-click purge.
+- **Quick Maintenance**: One-tap shortcut for package manager stores (`pnpm`, `npm`, `brew`) and macOS Trash.
 
 ### 2. 🧼 Deep System Cleaning
-- **Application Caches**: Deep scans `~/Library/Caches` to clean bloated browser data (Dia, Chrome), Spotify cache, and Homebrew bottles.
-- **Build & Compiler Caches**: Targets hidden build folders including Next.js (`.next/cache`), Rust (`target/`), and temporary compiler outputs.
-- **Package Managers**: Prunes unreferenced global store files from `pnpm`, `npm`, and `brew`.
-- **System Logs & Reports**: Cleans old diagnostic dumps, crash reporters, and leftover AI logs.
-- **Granular Selection**: Translucent checkboxes let you select exactly what to clean, with real-time estimation of recoverable gigabytes.
+- **Application Caches**: Deep-scans `~/Library/Caches` to safely remove cached data from web browsers, Spotify, Homebrew, and daily apps.
+- **Build & Compiler Artifacts**: Reclaims storage locked by build caches (`.next/cache`, `target/`, compiler scratch directories).
+- **Package Stores**: Prunes unreferenced global cache packages without touching your active tools.
+- **System Logs & Diagnostic Reports**: Removes old crash logs and stale telemetry dumps from `~/Library/Logs`.
+- **Granular Control**: Every category can be reviewed and toggled before cleaning, with a live counter of recoverable space.
 
 ### 3. ⚡ Process Sentinel & CPU Tamer (Anti-Freeze)
-- **Real-Time CPU Monitoring**: Lightweight background tracker inspecting the top 7 CPU & memory consumers every 6 seconds.
-- **Runaway Loop Detection**: If an orphaned daemon or background task consumes >25% CPU for extended periods, a bold red alert card immediately warns you.
-- **One-Click Process Termination**: Safely kill runaway background tasks with built-in safety guardrails protecting critical macOS system processes (`WindowServer`, `launchd`).
+- **Top 7 CPU Consumers**: Real-time telemetry refreshed every 6 seconds with negligible system impact.
+- **Runaway Loop Warning**: Automatically highlights background daemons or unresponsive apps consuming >25% CPU with a prominent red alert card.
+- **One-Click Process Killer**: Terminate frozen or rogue tasks instantly, backed by safety guardrails that protect critical macOS system processes (`WindowServer`, `launchd`).
 
 ---
 
 ## ⚡ Comparison
 
-| Feature | CleanBar 🍏 | CleanMyMac | Typical Electron Cleaners |
+| Feature | CleanBar 🍏 | CleanMyMac | Electron Cleaners |
 | :--- | :---: | :---: | :---: |
-| **Technology** | **Pure Swift 6 + SwiftUI** | Objective-C / Swift | Electron / Chromium |
-| **Download Size** | **471 KB** | ~150 MB | 120–250 MB |
-| **Idle RAM Usage** | **< 45 MB** | 120–200 MB | 300–600 MB |
-| **Idle CPU Usage** | **0.0%** | Background daemon | 1.0–4.0% |
-| **Pricing** | **100% Free & Open Source** | $39.95 / year | Freemium / Paid |
-| **UI Design** | **Native Frosted Glass Popover** | Proprietary Window | Webview / HTML |
-| **Developer & Video Focus** | **Yes (`~/video`, `node_modules`, builds)** | No (Generic) | Limited |
+| **Engine** | **Native Swift 6 + SwiftUI** | Objective-C / Swift | Electron / Web Technologies |
+| **App Size** | **471 KB** | ~150 MB | 120–250 MB |
+| **Idle Memory (RAM)** | **< 45 MB** | 120–200 MB | 300–600 MB |
+| **Idle CPU Usage** | **0.0%** | Background Daemon | 1.0–4.0% |
+| **Price** | **100% Free & Open Source** | $39.95 / year | Subscription / Freemium |
+| **Design** | **Native Frosted Glass Popover** | Custom Window | Web HTML/CSS |
+| **Telemetry / Tracking** | **None (100% Offline)** | Extensive | Analytics Trackers |
 
 ---
 
 ## 📥 Installation
 
-### Option 1: Direct Download (Recommended)
-1. Head over to the **[Latest Release](https://github.com/JulioJCLF/CleanBar/releases/latest)**.
-2. Download `CleanBar-v1.0.0-macOS-Universal.zip` (only 471 KB).
-3. Unzip and drag `CleanBar.app` to your **Applications** folder (`/Applications`).
-4. Launch `CleanBar`—the sparkles icon (`✨`) will instantly appear in your menu bar!
+### Option 1: Direct Download (Pre-built Universal Binary)
+1. Download `CleanBar-v1.0.0-macOS-Universal.zip` from the **[Latest Release](https://github.com/JulioJCLF/CleanBar/releases/latest)**.
+2. Unzip and drag `CleanBar.app` into your **Applications** folder (`/Applications`).
+3. Launch `CleanBar`—the sparkles icon (`✨`) will appear in your top menu bar!
 
 > [!TIP]
-> **First-time macOS Gatekeeper Notice**: Because this is an indie open-source app built without an Apple Developer corporate subscription, on the very first launch: **Right-click** `CleanBar.app` → click **Open** → confirm **Open**.
+> **First Launch on macOS**: As an open-source project without a paid Apple Developer certificate, on the first launch: **Right-click** `CleanBar.app` → select **Open** → click **Open** to confirm.
 
-### Option 2: Start on System Boot (Optional)
+### Option 2: Launch on Startup (Recommended)
 1. Open **System Settings** on your Mac.
-2. Navigate to **General** > **Login Items**.
-3. Under *Open at Login*, click `+` and choose `/Applications/CleanBar.app`.
+2. Go to **General** > **Login Items**.
+3. Under *Open at Login*, click `+` and add `/Applications/CleanBar.app`.
 
 ---
 
 ## 🛠️ Building from Source
 
-CleanBar is built using Swift Package Manager with zero third-party dependencies.
+CleanBar compiles with zero third-party package dependencies.
 
-### Prerequisites
+### Requirements
 - macOS 13.0 (Ventura) or newer
 - Xcode Command Line Tools (`xcode-select --install`)
 
-### Compilation Commands:
 ```bash
-# 1. Clone the repository
+# Clone the repository
 git clone https://github.com/JulioJCLF/CleanBar.git
 cd CleanBar
 
-# 2. Build for Apple Silicon (M1/M2/M3/M4)
+# Build Universal 2 binary (Apple Silicon + Intel)
 swift build -c release --arch arm64
-
-# 3. Build for Intel Macs
 swift build -c release --arch x86_64
 
-# 4. Create Universal 2 binary with lipo
+# Package into Universal App
 lipo -create -output CleanBar.app/Contents/MacOS/CleanBar \
   .build/arm64-apple-macosx/release/CleanBar \
   .build/x86_64-apple-macosx/release/CleanBar
 ```
-
----
-
-## 🛡️ Architecture & Performance Principles
-
-- **No Continuous Disk Spun**: CleanBar avoids background polling loops. All disk traversal and calculations are strictly asynchronous and on-demand with intelligent debouncing.
-- **Sub-Millisecond Kernel Reads**: Storage status queries utilize Darwin POSIX `statfs` directly, bypassing slow APFS purgeable computation daemons.
-- **Accessory Runloop**: Configured with `LSUIElement=true` and explicit transparent lifecycle management to prevent macOS Automatic Termination freezes.
 
 ---
 
