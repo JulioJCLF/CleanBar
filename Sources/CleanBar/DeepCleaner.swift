@@ -120,7 +120,7 @@ public final class DeepCleaner: @unchecked Sendable {
         }
     }
     
-    // MARK: - Calculations
+    // MARK: - Calculations (Pure Swift Darwin Native - 0 child processes, 0 deadlocks)
     
     private func calculateAppCacheSize() -> Int64 {
         let home = NSHomeDirectory()
@@ -130,11 +130,12 @@ public final class DeepCleaner: @unchecked Sendable {
         guard let items = try? fm.contentsOfDirectory(atPath: cachesPath) else { return 0 }
         
         var total: Int64 = 0
+        let ignoredPrefixes = ["com.apple.", ".", "CloudKit", "FamilyCircle", "familycircled"]
+        
         for item in items {
-            // Include third-party and heavy browser/app caches, skip Apple protected caches
-            if item.hasPrefix("com.apple.") { continue }
+            if ignoredPrefixes.contains(where: { item.hasPrefix($0) }) { continue }
             let itemPath = (cachesPath as NSString).appendingPathComponent(item)
-            total += fastDirectorySize(itemPath)
+            total += fastDirectorySize(itemPath, maxDepth: 2)
         }
         return total
     }
@@ -147,9 +148,10 @@ public final class DeepCleaner: @unchecked Sendable {
         guard let files = try? fm.contentsOfDirectory(atPath: downloadsPath) else { return 0 }
         
         var total: Int64 = 0
+        let targetExtensions: Set<String> = ["dmg", "pkg", "iso"]
         for file in files {
             let ext = (file as NSString).pathExtension.lowercased()
-            if ext == "dmg" || ext == "pkg" || ext == "iso" {
+            if targetExtensions.contains(ext) {
                 let filePath = (downloadsPath as NSString).appendingPathComponent(file)
                 if let attrs = try? fm.attributesOfItem(atPath: filePath),
                    let size = attrs[.size] as? Int64 {
@@ -163,13 +165,13 @@ public final class DeepCleaner: @unchecked Sendable {
     private func calculateLogsSize() -> Int64 {
         let home = NSHomeDirectory()
         let logsPath = (home as NSString).appendingPathComponent("Library/Logs")
-        return fastDirectorySize(logsPath)
+        return fastDirectorySize(logsPath, maxDepth: 2)
     }
     
     private func calculateTrashSize() -> Int64 {
         let home = NSHomeDirectory()
         let trashPath = (home as NSString).appendingPathComponent(".Trash")
-        return fastDirectorySize(trashPath)
+        return fastDirectorySize(trashPath, maxDepth: 2)
     }
     
     // MARK: - Cleaners
@@ -181,12 +183,14 @@ public final class DeepCleaner: @unchecked Sendable {
         
         guard let items = try? fm.contentsOfDirectory(atPath: cachesPath) else { return }
         
+        let ignoredPrefixes = ["com.apple.", ".", "CloudKit", "FamilyCircle", "familycircled"]
+        
         for item in items {
-            // Avoid touching system protected com.apple.* to prevent permission dialogs or system locks
-            if item.hasPrefix("com.apple.") { continue }
+            // Avoid touching system protected or sensitive folders
+            if ignoredPrefixes.contains(where: { item.hasPrefix($0) }) { continue }
             let itemPath = (cachesPath as NSString).appendingPathComponent(item)
             
-            // Clean contents of cache directories
+            // Clean contents of cache directories gracefully without blocking
             if let subItems = try? fm.contentsOfDirectory(atPath: itemPath) {
                 for sub in subItems {
                     let subPath = (itemPath as NSString).appendingPathComponent(sub)
@@ -205,9 +209,10 @@ public final class DeepCleaner: @unchecked Sendable {
         
         guard let files = try? fm.contentsOfDirectory(atPath: downloadsPath) else { return }
         
+        let targetExtensions: Set<String> = ["dmg", "pkg", "iso"]
         for file in files {
             let ext = (file as NSString).pathExtension.lowercased()
-            if ext == "dmg" || ext == "pkg" || ext == "iso" {
+            if targetExtensions.contains(ext) {
                 let filePath = (downloadsPath as NSString).appendingPathComponent(file)
                 try? fm.removeItem(atPath: filePath)
             }
@@ -242,35 +247,35 @@ public final class DeepCleaner: @unchecked Sendable {
         SystemMonitor.shared.emptyTrash { _ in }
     }
     
-    private func fastDirectorySize(_ path: String) -> Int64 {
-        guard FileManager.default.fileExists(atPath: path) else { return 0 }
-        let task = Process()
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.standardError = Pipe()
-        task.arguments = ["-sk", path]
-        task.launchPath = "/usr/bin/du"
+    // Fast, non-blocking native directory size calculation (Zero child processes, zero pipe deadlock)
+    private func fastDirectorySize(_ path: String, maxDepth: Int = 2) -> Int64 {
+        let url = URL(fileURLWithPath: path)
+        let fm = FileManager.default
+        var isDir: ObjCBool = false
+        guard fm.fileExists(atPath: path, isDirectory: &isDir) else { return 0 }
         
-        do {
-            try task.run()
-            
-            // Timeout safety: kill if du hangs more than 1.5s
-            DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + 1.5) {
-                if task.isRunning {
-                    task.terminate()
+        if !isDir.boolValue {
+            return (try? fm.attributesOfItem(atPath: path)[.size] as? Int64) ?? 0
+        }
+        
+        var total: Int64 = 0
+        if let enumerator = fm.enumerator(
+            at: url,
+            includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey],
+            options: [.skipsPackageDescendants]
+        ) {
+            for case let fileURL as URL in enumerator {
+                if enumerator.level > maxDepth {
+                    enumerator.skipDescendants()
+                    continue
+                }
+                if let values = try? fileURL.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey]),
+                   values.isRegularFile == true,
+                   let size = values.fileSize {
+                    total += Int64(size)
                 }
             }
-            
-            task.waitUntilExit()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            if let output = String(data: data, encoding: .utf8),
-               let firstPart = output.split(separator: "\t").first,
-               let kb = Int64(firstPart.trimmingCharacters(in: .whitespacesAndNewlines)) {
-                return kb * 1024
-            }
-        } catch {
-            return 0
         }
-        return 0
+        return total
     }
 }

@@ -39,6 +39,13 @@ public final class ProcessMonitor: @unchecked Sendable {
         do {
             try task.run()
             
+            // Watchdog guard: kill task if it hangs longer than 1.0 second
+            DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + 1.0) {
+                if task.isRunning {
+                    task.terminate()
+                }
+            }
+            
             // CRUCIAL: Always read from pipe BEFORE waiting to exit.
             // In macOS, pipes have a 64KB buffer. If ps produces >64KB and we call waitUntilExit() first,
             // the process blocks forever waiting for the pipe to be drained, causing a permanent deadlock!

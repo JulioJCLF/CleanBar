@@ -39,25 +39,16 @@ public final class AppState: ObservableObject {
     @Published public var deepCleanProgressText = ""
     @Published public var totalRecoverableBytes: Int64 = 0
     
-    // Process Monitor (Refreshed only when user opens tab or popover)
+    // Process Monitor (Refreshed strictly on demand when user opens tab or clicks refresh)
     @Published public var topProcesses: [ProcessInfoItem] = []
     @Published public var hasHighCPUProcess = false
     @Published public var isFetchingProcesses = false
     @Published public var processToKill: ProcessInfoItem?
     
-    private var menubarTimer: Timer?
-    
     private init() {
+        // Single initial snapshot; zero continuous timers while closed
         refreshDisk()
         refreshMemory()
-        
-        // Refresh menubar title (POSIX statfs) every 60s
-        menubarTimer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.refreshDisk()
-                self?.refreshMemory()
-            }
-        }
     }
     
     public func refreshDisk() {
@@ -72,7 +63,7 @@ public final class AppState: ObservableObject {
         guard !isFetchingProcesses else { return }
         isFetchingProcesses = true
         
-        DispatchQueue.global(qos: .utility).async { [weak self] in
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let procs = ProcessMonitor.shared.fetchTopProcesses(limit: 7)
             let highCPU = procs.contains { $0.isHighCPU && !$0.isSystemCritical }
             
@@ -100,7 +91,7 @@ public final class AppState: ObservableObject {
         guard !isScanningCategories else { return }
         isScanningCategories = true
         
-        DispatchQueue.global(qos: .utility).async { [weak self] in
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let cats = DeepCleaner.shared.scanCategories()
             let total = cats.reduce(0) { $0 + $1.estimatedSizeBytes }
             

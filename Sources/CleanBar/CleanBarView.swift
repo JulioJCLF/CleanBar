@@ -142,7 +142,7 @@ public struct CleanBarView: View {
                     if tab == .deepClean && state.deepCleanCategories.isEmpty {
                         state.scanDeepClean()
                     }
-                    if tab == .processes {
+                    if tab == .processes && state.topProcesses.isEmpty {
                         state.refreshProcesses()
                     }
                 }) {

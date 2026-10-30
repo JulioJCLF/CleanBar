@@ -101,7 +101,7 @@ Most utilities designed to solve this are either **heavy Electron applications**
 ## 📥 Installation
 
 ### Option 1: Direct Download (Pre-built Universal Binary)
-1. Download `CleanBar-v1.0.1-macOS-Universal.zip` from the **[Latest Release](https://github.com/JulioJCLF/CleanBar/releases/latest)**.
+1. Download `CleanBar-v1.0.2-macOS-Universal.zip` from the **[Latest Release](https://github.com/JulioJCLF/CleanBar/releases/latest)**.
 2. Unzip and drag `CleanBar.app` into your **Applications** folder (`/Applications`).
 3. Launch `CleanBar`—the sparkles icon (`✨`) will appear in your top menu bar!
 

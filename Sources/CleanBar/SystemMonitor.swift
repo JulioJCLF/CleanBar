@@ -136,28 +136,4 @@ public final class SystemMonitor: @unchecked Sendable {
             }
         }
     }
-    
-    @discardableResult
-    public func runShellCommand(_ command: String) -> String {
-        let task = Process()
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.standardError = pipe
-        task.arguments = ["-c", command]
-        task.launchPath = "/bin/zsh"
-        
-        let home = NSHomeDirectory()
-        var env = ProcessInfo.processInfo.environment
-        env["PATH"] = "/opt/homebrew/bin:\(home)/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-        task.environment = env
-        
-        do {
-            try task.run()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            task.waitUntilExit()
-            return String(data: data, encoding: .utf8) ?? ""
-        } catch {
-            return "Erro: \(error.localizedDescription)"
-        }
-    }
 }

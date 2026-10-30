@@ -10,7 +10,6 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelega
     private var popover: NSPopover!
     private var globalEventMonitor: Any?
     private var keyEventMonitor: Any?
-    private var menubarTimer: Timer?
     
     public func applicationDidFinishLaunching(_ notification: Notification) {
         Self.shared = self
@@ -37,14 +36,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelega
         popover.delegate = self
         popover.contentViewController = NSHostingController(rootView: CleanBarView())
         
+        // Initial title calculation only once at launch; zero continuous timers while closed
         updateButtonTitle()
-        
-        // Refresh menubar title every 60 seconds (POSIX statfs)
-        menubarTimer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.updateButtonTitle()
-            }
-        }
     }
     
     @objc private func statusBarButtonClicked(_ sender: NSStatusBarButton) {
@@ -71,12 +64,15 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelega
     public func showPopover() {
         guard let button = statusItem.button else { return }
         
+        // Refresh lightweight syscalls (< 0.1ms) strictly on opening
         AppState.shared.refreshDisk()
         AppState.shared.refreshMemory()
+        updateButtonTitle()
+        
         if AppState.shared.selectedTab == .processes {
             AppState.shared.refreshProcesses()
         }
-        if AppState.shared.selectedTab == .deepClean {
+        if AppState.shared.selectedTab == .deepClean && AppState.shared.deepCleanCategories.isEmpty {
             AppState.shared.scanDeepClean()
         }
         
@@ -113,6 +109,15 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelega
             matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]
         ) { [weak self] _ in
             guard let self = self else { return }
+            
+            // If user clicked the status bar button itself, allow statusBarButtonClicked to toggle smoothly
+            if let button = self.statusItem.button, let window = button.window {
+                let mouseScreen = NSEvent.mouseLocation
+                if window.frame.contains(mouseScreen) {
+                    return
+                }
+            }
+            
             Task { @MainActor in
                 if self.popover.isShown {
                     self.closePopover()
@@ -191,12 +196,6 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelega
     
     public func updateButtonTitle() {
         let disk = SystemMonitor.shared.getDiskSpace()
-        let hasWarning = AppState.shared.hasHighCPUProcess
-        
-        if hasWarning {
-            statusItem.button?.title = " \(disk.freeFormatted) ⚠️"
-        } else {
-            statusItem.button?.title = " \(disk.freeFormatted)"
-        }
+        statusItem.button?.title = " \(disk.freeFormatted)"
     }
 }
