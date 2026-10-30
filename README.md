@@ -19,7 +19,7 @@
 
 <br/>
 
-<img src="assets/cleanbar-dashboard.png" width="440" alt="CleanBar Dashboard Preview" style="border-radius: 18px; box-shadow: 0 16px 40px rgba(0,0,0,0.4);" />
+<img src="assets/cleanbar-demo.gif" width="480" alt="CleanBar Demo in Action" style="border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,0.4);" />
 
 <br/>
 <br/>
