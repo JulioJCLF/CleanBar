@@ -58,24 +58,31 @@ public final class SystemMonitor: @unchecked Sendable {
         }
     }
     
-    public func runPackageCacheClean(progress: @escaping @Sendable (String) -> Void, completion: @escaping @Sendable (String) -> Void) {
+    public func runQuickCacheClean(progress: @escaping @Sendable (String) -> Void, completion: @escaping @Sendable (String) -> Void) {
         DispatchQueue.global(qos: .userInitiated).async {
-            var outputLog = ""
+            progress("Limpando caches de navegação e temporários...")
             
-            progress("Executando pnpm store prune...")
-            let pnpmResult = self.runShellCommand("/Users/jclf/.local/bin/pnpm store prune")
-            outputLog += "pnpm: \(pnpmResult.trimmingCharacters(in: .whitespacesAndNewlines))\n"
+            let home = NSHomeDirectory()
+            let cachesPath = (home as NSString).appendingPathComponent("Library/Caches")
+            let fm = FileManager.default
             
-            progress("Executando npm cache clean...")
-            let npmResult = self.runShellCommand("npm cache clean --force")
-            outputLog += "npm: \(npmResult.trimmingCharacters(in: .whitespacesAndNewlines))\n"
-            
-            progress("Executando brew cleanup...")
-            let brewResult = self.runShellCommand("/opt/homebrew/bin/brew cleanup -s")
-            outputLog += "brew: \(brewResult.trimmingCharacters(in: .whitespacesAndNewlines))\n"
+            var clearedItems = 0
+            if let items = try? fm.contentsOfDirectory(atPath: cachesPath) {
+                for item in items {
+                    // Safe browser and common app caches
+                    let lower = item.lowercased()
+                    if lower.contains("chrome") || lower.contains("spotify") || lower.contains("slack") ||
+                       lower.contains("discord") || lower.contains("arc") || lower.contains("dia") ||
+                       lower.contains("firefox") || lower.contains("brave") {
+                        let itemPath = (cachesPath as NSString).appendingPathComponent(item)
+                        try? fm.removeItem(atPath: itemPath)
+                        clearedItems += 1
+                    }
+                }
+            }
             
             DispatchQueue.main.async {
-                completion(outputLog)
+                completion("Caches de aplicativos e navegadores limpos!")
             }
         }
     }
@@ -89,8 +96,9 @@ public final class SystemMonitor: @unchecked Sendable {
         task.arguments = ["-c", command]
         task.launchPath = "/bin/zsh"
         
+        let home = NSHomeDirectory()
         var env = ProcessInfo.processInfo.environment
-        env["PATH"] = "/opt/homebrew/bin:/Users/jclf/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/jclf/.cargo/bin"
+        env["PATH"] = "/opt/homebrew/bin:\(home)/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
         task.environment = env
         
         do {

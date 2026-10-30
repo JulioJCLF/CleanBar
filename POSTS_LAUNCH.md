@@ -30,8 +30,8 @@ So I decided to build my own: **CleanBar** — an ultra-lightweight, zero-bloat 
 - **🪶 471 KB Total Size**: Zero dependencies. Consumes **0.0% CPU** at idle and **< 45MB RAM**.
 - **🍏 Native Glassmorphism**: Floating frosted glass popover (`.ultraThinMaterial`) that feels like an authentic macOS system feature.
 - **⚡ Sub-Millisecond Telemetry**: Queries filesystem metrics directly via Darwin POSIX `statfs`—zero lag, no slow APFS daemon freezes.
-- **🎬 Heavy Media & Scratch Cleaner**: Intelligently identifies media and scratch folders (`~/video`), purging multi-gigabyte `.mov` proxies and render caches with 1 click while preserving finished master videos and subtitles.
-- **🧼 Deep System Cleaning**: Granularly purges app caches (`~/Library/Caches` like Dia, Spotify, Chrome), build outputs (`.next`, `target`), package stores (`pnpm`, `npm`, `brew`), and old crash logs.
+- **🔍 Heavy Files & Storage Breakdown**: Surfaces your heaviest files (>40 MB) across Downloads, Desktop, Movies, and Documents with 1-click Reveal in Finder or Trash.
+- **🧼 Deep System Cleaning**: Granularly purges app & browser caches (`~/Library/Caches` like Chrome, Safari, Spotify, Slack), residual installer disk images (`.dmg`, `.pkg`), stale diagnostic logs, and trash.
 - **🚨 CPU Sentinel & Process Killer**: Real-time monitor of top CPU consumers with an instant kill switch for runaway background loops (with built-in safeguards for system-critical processes like WindowServer).
 - **Universal 2 Binary**: Runs natively on both **Apple Silicon (M1/M2/M3/M4)** and **Intel Macs**.
 - **🔒 100% Private & Offline**: No analytics, no accounts, no tracking.
@@ -52,9 +52,9 @@ I'd love to hear your feedback, feature requests, or bugs! If you find it helpfu
 Cansado de limpadores de 200 MB e assinaturas anuais de R$ 200, resolvi construir o meu próprio utilitário nativo para macOS: apresento o **CleanBar** 🍏🧹
 
 Quem usa MacBooks com SSDs de 256 GB ou 512 GB conhece bem a dor:
-- Arquivos temporários de vídeo e renders devoram gigabytes silenciosamente;
-- Pastas de build e dependências de projetos antigos acumulam dezenas de GBs;
-- Caches de navegadores e logs de ferramentas enchem o disco sem aviso;
+- Caches de navegadores (Chrome, Safari), Spotify, Slack e apps diários devoram gigabytes silenciosamente;
+- Instaladores residuais (.dmg e .pkg) ficam esquecidos na pasta Downloads consumindo gigabytes preciosos;
+- Logs de erro e relatórios de diagnóstico se acumulam no disco sem aviso;
 - E pior: processos em segundo plano entram em loop infinito (como daemons órfãos), drenando bateria e esquentando a máquina.
 
 Para resolver isso de forma elegante e sem sobrecarregar o Mac, desenvolvi o **CleanBar** — um aplicativo para a barra de menus 100% nativo construído com **Swift 6, SwiftUI e AppKit**.
@@ -63,8 +63,8 @@ Para resolver isso de forma elegante e sem sobrecarregar o Mac, desenvolvi o **C
 1. **Zero Bloatware (< 500 KB)**: Em vez de usar Electron ou webviews que gastam 300+ MB de RAM, o binário final tem apenas **471 KB** e roda consumindo menos de 45 MB de memória e **0.0% de CPU em repouso**.
 2. **Leituras do Kernel em Microssegundos**: As consultas de capacidade do SSD usam chamadas POSIX puras (`statfs`), sem acionar serviços lentos do APFS que causam aquela temida "bolinha de praia" do macOS.
 3. **Design Glassmorphism Fluido**: Interface translúcida em vidro fosco (`.ultraThinMaterial`) com três módulos práticos:
-   - 📊 **Visão Geral**: Monitor de SSD com barra em degradê e purga de caches pesados;
-   - 🧼 **Limpeza Profunda**: Scanner granular de caches de apps, compilação e logs;
+   - 📊 **Visão Geral**: Monitor de SSD com barra em degradê, localizador de arquivos pesados e distribuição de pastas;
+   - 🧼 **Limpeza Profunda**: Scanner granular de caches de apps, instaladores residuais (.dmg/.pkg), relatórios de erro e lixeira;
    - ⚡ **CPU Tamer**: Monitor em tempo real dos maiores consumidores de processador com encerramento de processos travados em 1 clique.
 4. **Universal 2 Binary**: Compilado nativamente tanto para Apple Silicon (M1 a M4) quanto para Macs Intel.
 
@@ -87,9 +87,9 @@ Feedbacks e sugestões são super bem-vindos! Se curtir, deixa uma ⭐ no reposi
 Tired of 200MB bloated cleaners and $40/year subscriptions, I decided to build my own native macOS menu bar janitor: meet **CleanBar** 🍏✨
 
 Anyone using a Mac with a 256GB or 512GB SSD knows the daily battle:
-- Video scratch files and render caches quietly gobble up 10–20 GB;
-- Inactive project dependencies (`node_modules`, build caches) pile up;
-- Browser cruft and tool logs silently eat away at storage;
+- Browser and app caches (Chrome, Safari, Spotify, Slack) quietly gobble up 10–20 GB;
+- Forgotten installers and disk images (.dmg, .pkg) linger in Downloads eating storage;
+- Diagnostic error reports and old system logs silently pile up invisible clutter;
 - Runaway background daemons peg CPU cores, drain battery, and cause system stutters.
 
 Instead of installing an Electron-based app that eats 300MB+ of RAM just idling, I built **CleanBar** from the ground up using **Swift 6, SwiftUI, and AppKit**.

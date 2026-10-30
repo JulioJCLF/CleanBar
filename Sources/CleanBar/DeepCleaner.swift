@@ -22,44 +22,44 @@ public final class DeepCleaner: @unchecked Sendable {
     public func scanCategories() -> [CleanCategoryItem] {
         var categories: [CleanCategoryItem] = []
         
-        // 1. App Caches
+        // 1. App & Browser Caches
         let appCacheSize = calculateAppCacheSize()
         categories.append(CleanCategoryItem(
             key: "app_caches",
-            title: "Caches de Aplicativos",
-            icon: "shippingbox",
-            subtitle: "Navegadores, Spotify, Dia e ferramentas em ~/Library/Caches",
+            title: "Caches de Aplicativos & Web",
+            icon: "globe.americas.fill",
+            subtitle: "Navegadores (Chrome, Safari, Arc), Spotify, Slack e apps",
             estimatedSizeBytes: appCacheSize
         ))
         
-        // 2. Build Caches (.next, target)
-        let buildCacheSize = calculateBuildCacheSize()
+        // 2. Residual Installers & DMGs
+        let installerSize = calculateInstallersSize()
         categories.append(CleanCategoryItem(
-            key: "build_caches",
-            title: "Caches de Build (.next, target)",
-            icon: "hammer",
-            subtitle: "Pastas de compilação temporárias em projetos ativos",
-            estimatedSizeBytes: buildCacheSize
+            key: "installers",
+            title: "Instaladores Residuais (.dmg, .pkg)",
+            icon: "shippingbox.fill",
+            subtitle: "Imagens de disco e pacotes de instalação em Downloads",
+            estimatedSizeBytes: installerSize
         ))
         
-        // 3. Package Managers (pnpm, npm, brew)
-        let packageManagerSize = calculatePackageManagerSize()
-        categories.append(CleanCategoryItem(
-            key: "pkg_managers",
-            title: "Gerenciadores de Pacote",
-            icon: "cube.box",
-            subtitle: "Pacotes não referenciados do pnpm, npm e fórmulas antigas do brew",
-            estimatedSizeBytes: packageManagerSize
-        ))
-        
-        // 4. Logs e Diagnósticos
+        // 3. System & App Logs
         let logsSize = calculateLogsSize()
         categories.append(CleanCategoryItem(
-            key: "logs",
-            title: "Logs e Relatórios Antigos",
-            icon: "doc.text",
-            subtitle: "Arquivos de log e relatórios em ~/Library/Logs",
+            key: "system_logs",
+            title: "Logs e Relatórios do Sistema",
+            icon: "doc.text.magnifyingglass",
+            subtitle: "Histórico de diagnósticos, falhas de apps e logs antigos",
             estimatedSizeBytes: logsSize
+        ))
+        
+        // 4. Trash & Temp Cache
+        let trashSize = calculateTrashSize()
+        categories.append(CleanCategoryItem(
+            key: "trash_temp",
+            title: "Lixeira & Arquivos Temporários",
+            icon: "trash.fill",
+            subtitle: "Lixeira do macOS e arquivos residuais de sessão",
+            estimatedSizeBytes: trashSize
         ))
         
         return categories
@@ -72,7 +72,7 @@ public final class DeepCleaner: @unchecked Sendable {
             
             // 1. App Caches
             if categories.contains("app_caches") {
-                progress("Limpando caches de aplicativos...")
+                progress("Limpando caches de aplicativos e navegadores...")
                 let before = self.calculateAppCacheSize()
                 self.cleanAppCaches()
                 let after = self.calculateAppCacheSize()
@@ -81,36 +81,37 @@ public final class DeepCleaner: @unchecked Sendable {
                 summary += "Caches de Apps: \(ByteCountFormatter.string(fromByteCount: freed, countStyle: .file))\n"
             }
             
-            // 2. Build Caches
-            if categories.contains("build_caches") {
-                progress("Limpando caches de build (.next, target)...")
-                let before = self.calculateBuildCacheSize()
-                self.cleanBuildCaches()
-                let after = self.calculateBuildCacheSize()
+            // 2. Installers
+            if categories.contains("installers") {
+                progress("Removendo instaladores residuais...")
+                let before = self.calculateInstallersSize()
+                self.cleanInstallers()
+                let after = self.calculateInstallersSize()
                 let freed = max(0, before - after)
                 freedBytes += freed
-                summary += "Caches de Build: \(ByteCountFormatter.string(fromByteCount: freed, countStyle: .file))\n"
+                summary += "Instaladores: \(ByteCountFormatter.string(fromByteCount: freed, countStyle: .file))\n"
             }
             
-            // 3. Package Managers
-            if categories.contains("pkg_managers") {
-                progress("Podando pnpm, npm e Homebrew...")
-                let _ = SystemMonitor.shared.runShellCommand("/Users/jclf/.local/bin/pnpm store prune")
-                let _ = SystemMonitor.shared.runShellCommand("npm cache clean --force")
-                let _ = SystemMonitor.shared.runShellCommand("/opt/homebrew/bin/brew cleanup -s")
-                freedBytes += 200 * 1024 * 1024 // estimate
-                summary += "Gerenciadores de Pacotes podados.\n"
-            }
-            
-            // 4. Logs
-            if categories.contains("logs") {
-                progress("Limpando logs antigos...")
+            // 3. System Logs
+            if categories.contains("system_logs") {
+                progress("Limpando logs e relatórios antigos...")
                 let before = self.calculateLogsSize()
                 self.cleanLogs()
                 let after = self.calculateLogsSize()
                 let freed = max(0, before - after)
                 freedBytes += freed
-                summary += "Logs removidos: \(ByteCountFormatter.string(fromByteCount: freed, countStyle: .file))\n"
+                summary += "Logs: \(ByteCountFormatter.string(fromByteCount: freed, countStyle: .file))\n"
+            }
+            
+            // 4. Trash & Temp
+            if categories.contains("trash_temp") {
+                progress("Esvaziando lixeira e temporários...")
+                let before = self.calculateTrashSize()
+                self.cleanTrashAndTemp()
+                let after = self.calculateTrashSize()
+                let freed = max(0, before - after)
+                freedBytes += freed
+                summary += "Lixeira & Temp: \(ByteCountFormatter.string(fromByteCount: freed, countStyle: .file))\n"
             }
             
             DispatchQueue.main.async {
@@ -122,76 +123,123 @@ public final class DeepCleaner: @unchecked Sendable {
     // MARK: - Calculations
     
     private func calculateAppCacheSize() -> Int64 {
-        let targets = [
-            "/Users/jclf/Library/Caches/company.thebrowser.dia",
-            "/Users/jclf/Library/Caches/Dia",
-            "/Users/jclf/Library/Caches/com.spotify.client",
-            "/Users/jclf/Library/Caches/Homebrew",
-            "/Users/jclf/Library/Caches/pnpm"
-        ]
+        let home = NSHomeDirectory()
+        let cachesPath = (home as NSString).appendingPathComponent("Library/Caches")
+        let fm = FileManager.default
+        
+        guard let items = try? fm.contentsOfDirectory(atPath: cachesPath) else { return 0 }
+        
         var total: Int64 = 0
-        for target in targets {
-            total += fastDirectorySize(target)
+        for item in items {
+            // Include third-party and heavy browser/app caches, skip Apple protected caches
+            if item.hasPrefix("com.apple.") { continue }
+            let itemPath = (cachesPath as NSString).appendingPathComponent(item)
+            total += fastDirectorySize(itemPath)
         }
         return total
     }
     
-    private func calculateBuildCacheSize() -> Int64 {
-        let targets = [
-            "/Users/jclf/Documents/projects/shopsoft/.next",
-            "/Users/jclf/Documents/projects/Crawler/frontend/.next",
-            "/Users/jclf/Documents/projects/mac-agent/frontend/.next"
-        ]
+    private func calculateInstallersSize() -> Int64 {
+        let home = NSHomeDirectory()
+        let downloadsPath = (home as NSString).appendingPathComponent("Downloads")
+        let fm = FileManager.default
+        
+        guard let files = try? fm.contentsOfDirectory(atPath: downloadsPath) else { return 0 }
+        
         var total: Int64 = 0
-        for target in targets {
-            total += fastDirectorySize(target)
+        for file in files {
+            let ext = (file as NSString).pathExtension.lowercased()
+            if ext == "dmg" || ext == "pkg" || ext == "iso" {
+                let filePath = (downloadsPath as NSString).appendingPathComponent(file)
+                if let attrs = try? fm.attributesOfItem(atPath: filePath),
+                   let size = attrs[.size] as? Int64 {
+                    total += size
+                }
+            }
         }
         return total
-    }
-    
-    private func calculatePackageManagerSize() -> Int64 {
-        let pnpmStore = "/Users/jclf/Library/pnpm"
-        let npmCache = "/Users/jclf/.npm"
-        return fastDirectorySize(pnpmStore) + fastDirectorySize(npmCache)
     }
     
     private func calculateLogsSize() -> Int64 {
-        return fastDirectorySize("/Users/jclf/Library/Logs")
+        let home = NSHomeDirectory()
+        let logsPath = (home as NSString).appendingPathComponent("Library/Logs")
+        return fastDirectorySize(logsPath)
+    }
+    
+    private func calculateTrashSize() -> Int64 {
+        let home = NSHomeDirectory()
+        let trashPath = (home as NSString).appendingPathComponent(".Trash")
+        return fastDirectorySize(trashPath)
     }
     
     // MARK: - Cleaners
     
     private func cleanAppCaches() {
-        let targets = [
-            "/Users/jclf/Library/Caches/company.thebrowser.dia",
-            "/Users/jclf/Library/Caches/Dia",
-            "/Users/jclf/Library/Caches/com.spotify.client/Data"
-        ]
-        for t in targets {
-            try? FileManager.default.removeItem(atPath: t)
+        let home = NSHomeDirectory()
+        let cachesPath = (home as NSString).appendingPathComponent("Library/Caches")
+        let fm = FileManager.default
+        
+        guard let items = try? fm.contentsOfDirectory(atPath: cachesPath) else { return }
+        
+        for item in items {
+            // Avoid touching system protected com.apple.* to prevent permission dialogs or system locks
+            if item.hasPrefix("com.apple.") { continue }
+            let itemPath = (cachesPath as NSString).appendingPathComponent(item)
+            
+            // Clean contents of cache directories
+            if let subItems = try? fm.contentsOfDirectory(atPath: itemPath) {
+                for sub in subItems {
+                    let subPath = (itemPath as NSString).appendingPathComponent(sub)
+                    try? fm.removeItem(atPath: subPath)
+                }
+            } else {
+                try? fm.removeItem(atPath: itemPath)
+            }
         }
     }
     
-    private func cleanBuildCaches() {
-        let targets = [
-            "/Users/jclf/Documents/projects/shopsoft/.next/cache",
-            "/Users/jclf/Documents/projects/Crawler/frontend/.next/cache",
-            "/Users/jclf/Documents/projects/mac-agent/frontend/.next/cache"
-        ]
-        for t in targets {
-            try? FileManager.default.removeItem(atPath: t)
+    private func cleanInstallers() {
+        let home = NSHomeDirectory()
+        let downloadsPath = (home as NSString).appendingPathComponent("Downloads")
+        let fm = FileManager.default
+        
+        guard let files = try? fm.contentsOfDirectory(atPath: downloadsPath) else { return }
+        
+        for file in files {
+            let ext = (file as NSString).pathExtension.lowercased()
+            if ext == "dmg" || ext == "pkg" || ext == "iso" {
+                let filePath = (downloadsPath as NSString).appendingPathComponent(file)
+                try? fm.removeItem(atPath: filePath)
+            }
         }
     }
     
     private func cleanLogs() {
-        let logsDir = "/Users/jclf/Library/Logs"
-        guard let files = try? FileManager.default.contentsOfDirectory(atPath: logsDir) else { return }
+        let home = NSHomeDirectory()
+        let logsPath = (home as NSString).appendingPathComponent("Library/Logs")
+        let fm = FileManager.default
+        
+        guard let files = try? fm.contentsOfDirectory(atPath: logsPath) else { return }
         for file in files {
-            if file.hasPrefix("Claude") || file.hasPrefix("com.openai") || file.hasSuffix(".log") {
-                let p = (logsDir as NSString).appendingPathComponent(file)
-                try? FileManager.default.removeItem(atPath: p)
+            let filePath = (logsPath as NSString).appendingPathComponent(file)
+            try? fm.removeItem(atPath: filePath)
+        }
+    }
+    
+    private func cleanTrashAndTemp() {
+        let home = NSHomeDirectory()
+        let trashPath = (home as NSString).appendingPathComponent(".Trash")
+        let fm = FileManager.default
+        
+        if let items = try? fm.contentsOfDirectory(atPath: trashPath) {
+            for item in items {
+                let itemPath = (trashPath as NSString).appendingPathComponent(item)
+                try? fm.removeItem(atPath: itemPath)
             }
         }
+        
+        // Also run Finder empty trash as standard macOS cleanup
+        SystemMonitor.shared.emptyTrash { _ in }
     }
     
     private func fastDirectorySize(_ path: String) -> Int64 {

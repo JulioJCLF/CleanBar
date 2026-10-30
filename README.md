@@ -33,9 +33,9 @@
 ## 💡 The Problem with Modern Mac Cleaners
 
 Over time, everyday macOS usage silently clutters your storage:
-- **Application & Browser Caches** (`~/Library/Caches`) quietly swell into tens of gigabytes.
-- **Media Scratch Files & Exports** leave behind massive temporary caches.
-- **Developer & Workspace Dependencies** (`node_modules`, Next.js `.next`, Rust `target/`) take up storage across inactive folders.
+- **Application & Browser Caches** (`~/Library/Caches`) quietly swell into tens of gigabytes from web browsers, streaming apps, and daily tools.
+- **Residual Installers & Leftover DMGs** (`.dmg`, `.pkg`) remain forgotten in your Downloads folder after installing apps.
+- **Diagnostic Reports & System Logs** (`~/Library/Logs`) pile up gigabytes of error telemetry and diagnostic dumps.
 - **Orphaned Daemons & Runaway Background Tasks** peg CPU cores, causing system heat and draining battery life.
 
 Most utilities designed to solve this are either **heavy Electron applications** (running an entire Chromium browser in background consuming 300+ MB of RAM) or lock basic features behind **expensive annual subscriptions**.
@@ -55,8 +55,8 @@ Most utilities designed to solve this are either **heavy Electron applications**
 
 | 📊 1. Overview & Heavy Files | 🧼 2. Deep System Cleaning | ⚡ 3. CPU Sentinel & Process Killer |
 |:---:|:---:|:---:|
-| <img src="assets/cleanbar-dashboard.png" width="280" alt="Dashboard" /> | <img src="assets/cleanbar-deepclean.png" width="280" alt="Deep Clean" /> | <img src="assets/cleanbar-processes.png" width="280" alt="Deep Clean" /> |
-| Real-time SSD gauge, media cache purger & heavy directory tracker | Granular purge for app caches, build artifacts & old logs | Real-time CPU monitor with instant kill switch for runaway loops |
+| <img src="assets/cleanbar-dashboard.png" width="280" alt="Dashboard" /> | <img src="assets/cleanbar-deepclean.png" width="280" alt="Deep Clean" /> | <img src="assets/cleanbar-processes.png" width="280" alt="Processes" /> |
+| Real-time SSD gauge, heavy files finder & storage folder breakdown | 4-category granular purge for app caches, installers, logs & trash | Real-time CPU monitor with instant kill switch for runaway loops |
 
 </div>
 
@@ -66,15 +66,15 @@ Most utilities designed to solve this are either **heavy Electron applications**
 
 ### 1. 📊 Real-Time Storage & Heavy File Manager
 - **Zero-Lag SSD Gauge**: Reads disk metrics directly from Darwin POSIX syscalls (`statfs`) in microseconds—never freezes your menu bar or waits on slow APFS background daemons.
-- **Media & Scratch Purger**: Quickly detects video and media caches (`~/video`), purging multi-gigabyte work files and `.mov` proxies while keeping your final exports and subtitles untouched.
-- **Heavy Folder & Project Scanner**: On-demand scanner identifying heavy directory trees (like `node_modules` or local workspaces) with one-click purge.
-- **Quick Maintenance**: One-tap shortcut for package manager stores (`pnpm`, `npm`, `brew`) and macOS Trash.
+- **Heavy Files Finder**: Automatically surfaces your largest files (>40 MB) across Downloads, Desktop, Movies, and Documents with 1-click Reveal in Finder or Trash.
+- **Folder Storage Breakdown**: Visual overview of how much space Downloads, Application Caches, Documents, and Trash are consuming.
+- **Quick Maintenance**: One-tap shortcuts for quick app cache purge and emptying macOS Trash.
 
 ### 2. 🧼 Deep System Cleaning
-- **Application Caches**: Deep-scans `~/Library/Caches` to safely remove cached data from web browsers, Spotify, Homebrew, and daily apps.
-- **Build & Compiler Artifacts**: Reclaims storage locked by build caches (`.next/cache`, `target/`, compiler scratch directories).
-- **Package Stores**: Prunes unreferenced global cache packages without touching your active tools.
-- **System Logs & Diagnostic Reports**: Removes old crash logs and stale telemetry dumps from `~/Library/Logs`.
+- **Application & Browser Caches**: Deep-scans `~/Library/Caches` to safely remove cached data from Chrome, Safari, Spotify, Slack, Discord, and third-party apps.
+- **Residual Installers & Images**: Detects and purges forgotten `.dmg`, `.pkg`, and `.iso` installers sitting in `~/Downloads`.
+- **System Logs & Diagnostic Reports**: Removes old crash logs, telemetry dumps, and stale diagnostic traces from `~/Library/Logs`.
+- **Trash & Session Temp**: Safely purges temporary session files and empties the macOS Trash.
 - **Granular Control**: Every category can be reviewed and toggled before cleaning, with a live counter of recoverable space.
 
 ### 3. ⚡ Process Sentinel & CPU Tamer (Anti-Freeze)

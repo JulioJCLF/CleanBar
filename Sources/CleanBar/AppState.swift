@@ -25,17 +25,17 @@ public final class AppState: ObservableObject {
     // Tab
     @Published public var selectedTab: AppTab = .dashboard
     
-    // Storage & Media
+    // Storage & Files
     @Published public var diskInfo: DiskSpaceInfo = DiskSpaceInfo(totalBytes: 0, freeBytes: 0, usedBytes: 0)
-    @Published public var videoFolders: [VideoFolderStatus] = []
-    @Published public var devProjects: [DevProjectStatus] = []
-    @Published public var isScanningProjects = false
+    @Published public var largeFiles: [LargeFileItem] = []
+    @Published public var folderBreakdown: [StorageFolderBreakdown] = []
+    @Published public var isScanningStorage = false
     @Published public var isCleaning = false
     @Published public var alertMessage: String?
     
     // Deep Clean
     @Published public var deepCleanCategories: [CleanCategoryItem] = []
-    @Published public var selectedCategories: Set<String> = ["app_caches", "build_caches", "pkg_managers", "logs"]
+    @Published public var selectedCategories: Set<String> = ["app_caches", "installers", "system_logs", "trash_temp"]
     @Published public var isDeepCleaning = false
     @Published public var deepCleanProgressText = ""
     @Published public var totalRecoverableBytes: Int64 = 0
@@ -44,9 +44,8 @@ public final class AppState: ObservableObject {
     @Published public var topProcesses: [ProcessInfoItem] = []
     @Published public var hasHighCPUProcess = false
     
-    // Modals
-    @Published public var projectToPurge: DevProjectStatus?
-    @Published public var showVideoConfirm = false
+    // Modals & Actions
+    @Published public var fileToTrash: LargeFileItem?
     @Published public var processToKill: ProcessInfoItem?
     
     private var diskTimer: Timer?
@@ -54,7 +53,7 @@ public final class AppState: ObservableObject {
     
     private init() {
         refreshDisk()
-        refreshVideoStatus()
+        refreshStorage()
         refreshProcesses()
         
         // Auto-refresh disk every 60s
@@ -76,8 +75,18 @@ public final class AppState: ObservableObject {
         self.diskInfo = SystemMonitor.shared.getDiskSpace()
     }
     
-    public func refreshVideoStatus() {
-        self.videoFolders = VideoJanitor.shared.scanVideoFolders()
+    public func refreshStorage(force: Bool = false) {
+        guard !isScanningStorage else { return }
+        isScanningStorage = true
+        
+        StorageScanner.shared.scan(force: force) { [weak self] files, breakdown in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                self.largeFiles = files
+                self.folderBreakdown = breakdown
+                self.isScanningStorage = false
+            }
+        }
     }
     
     public func refreshProcesses() {
@@ -130,6 +139,7 @@ public final class AppState: ObservableObject {
                 self.isDeepCleaning = false
                 self.deepCleanProgressText = ""
                 self.refreshDisk()
+                self.refreshStorage(force: true)
                 self.scanDeepClean()
                 let freedStr = ByteCountFormatter.string(fromByteCount: freedBytes, countStyle: .file)
                 self.alertMessage = "Limpeza Profunda concluída! \(freedStr) recuperados."
@@ -137,55 +147,24 @@ public final class AppState: ObservableObject {
         }
     }
     
-    public func scanProjects() {
-        guard !isScanningProjects else { return }
-        isScanningProjects = true
-        
-        DevCleaner.shared.triggerManualScan(force: true) { [weak self] results in
-            Task { @MainActor [weak self] in
-                guard let self = self else { return }
-                self.devProjects = results
-                self.isScanningProjects = false
-            }
-        }
+    public func trashLargeFile(_ item: LargeFileItem) {
+        isCleaning = true
+        let success = StorageScanner.shared.trashFile(at: item.path)
+        isCleaning = false
+        refreshDisk()
+        refreshStorage(force: true)
+        alertMessage = success ? "\(item.name) movido para a Lixeira." : "Falha ao mover arquivo."
     }
     
-    public func purgeNodeModules(for project: DevProjectStatus) {
-        guard let path = project.nodeModulesPath else { return }
+    public func cleanQuickCaches() {
         isCleaning = true
-        
-        DevCleaner.shared.cleanNodeModules(at: path) { [weak self] success in
+        SystemMonitor.shared.runQuickCacheClean(progress: { _ in }) { [weak self] log in
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
                 self.isCleaning = false
                 self.refreshDisk()
-                self.scanProjects()
-                self.alertMessage = success ? "node_modules de \(project.name) removido!" : "Falha ao remover."
-            }
-        }
-    }
-    
-    public func cleanVideoCaches() {
-        isCleaning = true
-        VideoJanitor.shared.cleanVideoDirectory(at: VideoJanitor.shared.videoDirPath) { [weak self] log in
-            Task { @MainActor [weak self] in
-                guard let self = self else { return }
-                self.isCleaning = false
-                self.refreshDisk()
-                self.refreshVideoStatus()
-                self.alertMessage = log.isEmpty ? "Nenhum cache dispensável encontrado." : log
-            }
-        }
-    }
-    
-    public func cleanPackageCaches() {
-        isCleaning = true
-        SystemMonitor.shared.runPackageCacheClean(progress: { _ in }) { [weak self] log in
-            Task { @MainActor [weak self] in
-                guard let self = self else { return }
-                self.isCleaning = false
-                self.refreshDisk()
-                self.alertMessage = "Caches de pacotes podados com sucesso!"
+                self.refreshStorage(force: true)
+                self.alertMessage = log
             }
         }
     }
@@ -194,6 +173,7 @@ public final class AppState: ObservableObject {
         SystemMonitor.shared.emptyTrash { [weak self] success in
             Task { @MainActor [weak self] in
                 self?.refreshDisk()
+                self?.refreshStorage(force: true)
                 self?.alertMessage = success ? "Lixeira do macOS esvaziada!" : "Aviso ao tentar esvaziar lixeira."
             }
         }
@@ -201,5 +181,9 @@ public final class AppState: ObservableObject {
     
     public func openFolder(_ path: String) {
         NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: path)
+    }
+    
+    public func revealInFinder(_ path: String) {
+        NSWorkspace.shared.selectFile(path, inFileViewerRootedAtPath: (path as NSString).deletingLastPathComponent)
     }
 }

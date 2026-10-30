@@ -33,39 +33,25 @@ public struct CleanBarView: View {
         .frame(width: 350)
         .background(.ultraThinMaterial)
         .alert(
-            "Purgar node_modules?",
+            "Mover para a Lixeira?",
             isPresented: Binding(
-                get: { state.projectToPurge != nil },
-                set: { if !$0 { state.projectToPurge = nil } }
+                get: { state.fileToTrash != nil },
+                set: { if !$0 { state.fileToTrash = nil } }
             )
         ) {
-            Button("Purgar", role: .destructive) {
-                if let proj = state.projectToPurge {
-                    state.purgeNodeModules(for: proj)
-                    state.projectToPurge = nil
+            Button("Mover para Lixeira", role: .destructive) {
+                if let file = state.fileToTrash {
+                    state.trashLargeFile(file)
+                    state.fileToTrash = nil
                 }
             }
             Button("Cancelar", role: .cancel) {
-                state.projectToPurge = nil
+                state.fileToTrash = nil
             }
         } message: {
-            if let proj = state.projectToPurge {
-                Text("Deseja remover as dependências de \(proj.name) (\(proj.sizeFormatted))? Você pode reinstalar com pnpm i quando for usar.")
+            if let file = state.fileToTrash {
+                Text("Deseja mover '\(file.name)' (\(file.sizeFormatted)) para a Lixeira? Você pode restaurá-lo se precisar.")
             }
-        }
-        .alert(
-            "Otimizar Pasta de Vídeos?",
-            isPresented: Binding(
-                get: { state.showVideoConfirm },
-                set: { state.showVideoConfirm = $0 }
-            )
-        ) {
-            Button("Otimizar", role: .none) {
-                state.cleanVideoCaches()
-            }
-            Button("Cancelar", role: .cancel) {}
-        } message: {
-            Text("Remove pastas 'work/' temporárias e arquivos .mov pesados em ~/video, preservando masters e legendas.")
         }
         .alert(
             "Finalizar Processo?",
@@ -120,7 +106,7 @@ public struct CleanBarView: View {
             HStack(spacing: 6) {
                 Button(action: {
                     state.refreshDisk()
-                    state.refreshVideoStatus()
+                    state.refreshStorage(force: true)
                     state.refreshProcesses()
                     if state.selectedTab == .deepClean {
                         state.scanDeepClean()
@@ -204,7 +190,7 @@ public struct CleanBarView: View {
     // MARK: - Tab 1: Dashboard
     private var dashboardTabView: some View {
         VStack(spacing: 12) {
-            // Storage Card
+            // Storage Gauge Card
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Label("Macintosh HD", systemImage: "internaldrive.fill")
@@ -247,80 +233,23 @@ public struct CleanBarView: View {
             .padding(12)
             .glassCard()
             
-            // Media & Large Files Card
+            // Large Files Card
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Label("Mídia & Arquivos Grandes", systemImage: "film.stack")
+                    Label("Arquivos Mais Pesados", systemImage: "doc.badge.arrow.up")
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .foregroundColor(.primary)
                     Spacer()
                     
-                    if let folder = state.videoFolders.first {
-                        Text(folder.isOptimized ? "✅ Otimizado" : "⚠️ Caches")
-                            .font(.system(size: 10, weight: .semibold))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(folder.isOptimized ? Color.green.opacity(0.15) : Color.orange.opacity(0.15), in: Capsule())
-                            .foregroundColor(folder.isOptimized ? .green : .orange)
-                    }
-                }
-                
-                HStack(spacing: 8) {
-                    if let folder = state.videoFolders.first {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Pasta ~/video")
-                                .font(.system(size: 11, weight: .medium))
-                            Text(folder.sizeFormatted)
-                                .font(.system(size: 10))
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    
-                    Spacer()
-                    
-                    Button(action: {
-                        state.openFolder(VideoJanitor.shared.videoDirPath)
-                    }) {
-                        Label("Finder", systemImage: "folder")
-                            .font(.system(size: 10, weight: .semibold))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 5)
-                            .glassButton()
-                    }
-                    .buttonStyle(.plain)
-                    
-                    Button(action: {
-                        state.showVideoConfirm = true
-                    }) {
-                        Label("Purgar Caches", systemImage: "wand.and.stars")
-                            .font(.system(size: 10, weight: .semibold))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 5)
-                            .glassButton()
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(12)
-            .glassCard()
-            
-            // Projects & Heavy Folders Card
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Label("Projetos & Pastas Pesadas", systemImage: "folder.badge.gearshape")
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundColor(.primary)
-                    Spacer()
-                    
-                    if state.isScanningProjects {
+                    if state.isScanningStorage {
                         ProgressView()
                             .scaleEffect(0.6)
                             .frame(width: 14, height: 14)
                     } else {
                         Button(action: {
-                            state.scanProjects()
+                            state.refreshStorage(force: true)
                         }) {
-                            Text(state.devProjects.isEmpty ? "Rastrear node_modules" : "Reescanear")
+                            Text("Reescanear")
                                 .font(.system(size: 10, weight: .semibold))
                                 .foregroundColor(.cyan)
                         }
@@ -328,22 +257,27 @@ public struct CleanBarView: View {
                     }
                 }
                 
-                if state.devProjects.isEmpty {
-                    Text(state.isScanningProjects ? "Rastreando pastas em background..." : "Clique em 'Rastrear' para verificar dependências.")
+                if state.largeFiles.isEmpty {
+                    Text(state.isScanningStorage ? "Buscando arquivos pesados..." : "Nenhum arquivo grande (>40MB) detectado.")
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                         .padding(.vertical, 4)
                 } else {
-                    VStack(spacing: 6) {
-                        ForEach(state.devProjects.prefix(3)) { proj in
-                            HStack {
-                                Text(proj.name)
+                    VStack(spacing: 5) {
+                        ForEach(state.largeFiles) { file in
+                            HStack(spacing: 8) {
+                                Image(systemName: file.systemIcon)
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.cyan)
+                                    .frame(width: 18)
+                                
+                                Text(file.name)
                                     .font(.system(size: 11, weight: .medium))
                                     .lineLimit(1)
                                 
                                 Spacer()
                                 
-                                Text(proj.sizeFormatted)
+                                Text(file.sizeFormatted)
                                     .font(.system(size: 10, weight: .semibold))
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
@@ -351,7 +285,7 @@ public struct CleanBarView: View {
                                     .foregroundColor(.secondary)
                                 
                                 Button(action: {
-                                    state.openFolder(proj.path)
+                                    state.revealInFinder(file.path)
                                 }) {
                                     Image(systemName: "folder")
                                         .font(.system(size: 10))
@@ -359,9 +293,10 @@ public struct CleanBarView: View {
                                         .frame(width: 20, height: 20)
                                 }
                                 .buttonStyle(.plain)
+                                .help("Revelar no Finder")
                                 
                                 Button(action: {
-                                    state.projectToPurge = proj
+                                    state.fileToTrash = file
                                 }) {
                                     Image(systemName: "trash")
                                         .font(.system(size: 10))
@@ -369,6 +304,7 @@ public struct CleanBarView: View {
                                         .frame(width: 20, height: 20)
                                 }
                                 .buttonStyle(.plain)
+                                .help("Mover para Lixeira")
                             }
                             .padding(.vertical, 2)
                         }
@@ -378,15 +314,51 @@ public struct CleanBarView: View {
             .padding(12)
             .glassCard()
             
+            // Storage Breakdown Card
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Distribuição de Pastas", systemImage: "chart.pie.fill")
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary)
+                
+                HStack(spacing: 6) {
+                    ForEach(state.folderBreakdown) { folder in
+                        Button(action: {
+                            state.openFolder(folder.path)
+                        }) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: folder.icon)
+                                        .font(.system(size: 9))
+                                        .foregroundColor(.cyan)
+                                    Text(folder.name)
+                                        .font(.system(size: 10, weight: .medium))
+                                        .lineLimit(1)
+                                }
+                                Text(folder.sizeFormatted)
+                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                    .foregroundColor(.primary)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(8)
+                            .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Color.white.opacity(0.08), lineWidth: 0.8))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .padding(12)
+            .glassCard()
+            
             // Quick Actions Pills
             HStack(spacing: 8) {
                 Button(action: {
-                    state.cleanPackageCaches()
+                    state.cleanQuickCaches()
                 }) {
                     HStack(spacing: 6) {
                         Image(systemName: "bolt.fill")
                             .foregroundColor(.yellow)
-                        Text("Caches (pnpm/npm/brew)")
+                        Text("Limpar Caches Rápidos")
                             .font(.system(size: 10, weight: .semibold))
                     }
                     .frame(maxWidth: .infinity)
@@ -549,71 +521,85 @@ public struct CleanBarView: View {
                         Text("Finalizar")
                             .font(.system(size: 10, weight: .bold))
                             .foregroundColor(.white)
-                            .padding(.horizontal, 8)
+                            .padding(.horizontal, 10)
                             .padding(.vertical, 4)
                             .background(Color.red, in: Capsule())
                     }
                     .buttonStyle(.plain)
                 }
                 .padding(10)
-                .background(Color.red.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.red.opacity(0.3), lineWidth: 1))
+                .background(Color.red.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.red.opacity(0.4), lineWidth: 0.8))
             }
             
-            // Lista dos Top Processos
+            // Lista dos Maiores Processos
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Label("Consumo de CPU em Tempo Real", systemImage: "speedometer")
+                    Label("Consumo de CPU em Tempo Real", systemImage: "waveform.path.ecg")
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .foregroundColor(.primary)
                     Spacer()
-                    Text("Top 7")
-                        .font(.system(size: 10))
+                    Text("Auto 6s")
+                        .font(.system(size: 9))
                         .foregroundColor(.secondary)
                 }
                 
                 VStack(spacing: 4) {
                     ForEach(state.topProcesses) { proc in
                         HStack(spacing: 8) {
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(proc.name)
-                                    .font(.system(size: 11, weight: .medium))
-                                    .lineLimit(1)
-                                Text("PID: \(proc.pid) • RAM: \(String(format: "%.1f", proc.memPercent))%")
-                                    .font(.system(size: 9))
+                            Text(proc.name)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(proc.isSystemCritical ? .secondary : .primary)
+                                .lineLimit(1)
+                            
+                            if proc.isSystemCritical {
+                                Text("macOS")
+                                    .font(.system(size: 8, weight: .bold))
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1)
+                                    .background(Color.primary.opacity(0.06), in: Capsule())
                                     .foregroundColor(.secondary)
                             }
                             
                             Spacer()
                             
-                            Text(String(format: "%.1f%%", proc.cpuPercent))
-                                .font(.system(size: 10, weight: .bold, design: .rounded))
-                                .foregroundColor(proc.cpuPercent > 30 ? .red : (proc.cpuPercent > 10 ? .orange : .secondary))
-                                .frame(width: 44, alignment: .trailing)
+                            // CPU Bar
+                            GeometryReader { barGeo in
+                                ZStack(alignment: .leading) {
+                                    Capsule()
+                                        .fill(Color.primary.opacity(0.06))
+                                        .frame(height: 5)
+                                    
+                                    Capsule()
+                                        .fill(proc.isHighCPU ? Color.red : Color.cyan)
+                                        .frame(width: max(3, barGeo.size.width * CGFloat(min(proc.cpuPercent, 100.0)) / 100.0), height: 5)
+                                }
+                            }
+                            .frame(width: 50, height: 5)
+                            
+                            Text(String(format: "%4.1f%%", proc.cpuPercent))
+                                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                .foregroundColor(proc.isHighCPU ? .red : .secondary)
+                                .frame(width: 42, alignment: .trailing)
                             
                             if !proc.isSystemCritical {
                                 Button(action: {
                                     state.processToKill = proc
                                 }) {
                                     Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 13))
+                                        .font(.system(size: 12))
                                         .foregroundColor(.red.opacity(0.7))
                                 }
                                 .buttonStyle(.plain)
-                                .help("Encerrar processo")
+                                .help("Finalizar processo")
                             } else {
                                 Image(systemName: "lock.fill")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.secondary.opacity(0.5))
-                                    .help("Processo essencial do sistema")
+                                    .font(.system(size: 9))
+                                    .foregroundColor(.secondary.opacity(0.4))
+                                    .frame(width: 12)
                             }
                         }
-                        .padding(.vertical, 4)
-                        .padding(.horizontal, 6)
-                        .background(
-                            proc.isHighCPU ? Color.red.opacity(0.08) : Color.clear,
-                            in: RoundedRectangle(cornerRadius: 6)
-                        )
+                        .padding(.vertical, 3)
                     }
                 }
             }
@@ -622,72 +608,49 @@ public struct CleanBarView: View {
         }
     }
     
-    // MARK: - Toast Banner
+    // MARK: - Toast View
     private func toastView(_ msg: String) -> some View {
         HStack(spacing: 6) {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundColor(.green)
+                .font(.system(size: 12))
             Text(msg)
                 .font(.system(size: 10, weight: .medium))
+                .foregroundColor(.primary)
                 .lineLimit(2)
             Spacer()
-            Button(action: { state.alertMessage = nil }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 9))
-                    .foregroundColor(.secondary)
-            }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.2), lineWidth: 0.8))
-        .transition(.opacity)
+        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 0.8))
+        .transition(.opacity.combined(with: .move(edge: .bottom)))
     }
 }
 
-// MARK: - Glassmorphism View Modifiers
-
-public struct GlassCardModifier: ViewModifier {
-    public func body(content: Content) -> some View {
-        content
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.30),
-                                Color.white.opacity(0.08),
-                                Color.black.opacity(0.15)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
+// MARK: - View Modifiers
+extension View {
+    public func glassCard() -> some View {
+        self
+            .background(
+                Color.primary.opacity(0.04),
+                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
             )
-            .shadow(color: Color.black.opacity(0.12), radius: 8, x: 0, y: 4)
-    }
-}
-
-public struct GlassButtonModifier: ViewModifier {
-    public func body(content: Content) -> some View {
-        content
-            .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(Color.white.opacity(0.18), lineWidth: 0.8)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 0.8)
             )
-    }
-}
-
-public extension View {
-    func glassCard() -> some View {
-        self.modifier(GlassCardModifier())
     }
     
-    func glassButton() -> some View {
-        self.modifier(GlassButtonModifier())
+    public func glassButton() -> some View {
+        self
+            .background(
+                Color.primary.opacity(0.07),
+                in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(Color.white.opacity(0.15), lineWidth: 0.8)
+            )
     }
 }

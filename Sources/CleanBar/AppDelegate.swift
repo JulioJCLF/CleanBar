@@ -47,7 +47,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             popover.performClose(nil)
         } else {
             AppState.shared.refreshDisk()
-            AppState.shared.refreshVideoStatus()
+            AppState.shared.refreshStorage()
             AppState.shared.refreshProcesses()
             if AppState.shared.selectedTab == .deepClean {
                 AppState.shared.scanDeepClean()
