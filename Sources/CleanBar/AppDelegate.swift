@@ -10,7 +10,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelega
     private var popover: NSPopover!
     private var globalEventMonitor: Any?
     private var keyEventMonitor: Any?
-    private var updateTimer: Timer?
+    private var menubarTimer: Timer?
     
     public func applicationDidFinishLaunching(_ notification: Notification) {
         Self.shared = self
@@ -31,7 +31,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelega
         
         // Setup Popover with SwiftUI Glassmorphism View
         popover = NSPopover()
-        popover.contentSize = NSSize(width: 350, height: 500)
+        popover.contentSize = NSSize(width: 350, height: 490)
         popover.behavior = .transient
         popover.animates = true
         popover.delegate = self
@@ -39,8 +39,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelega
         
         updateButtonTitle()
         
-        // Refresh disk space in menubar title every 60 seconds
-        updateTimer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { [weak self] _ in
+        // Refresh menubar title every 60 seconds (POSIX statfs)
+        menubarTimer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.updateButtonTitle()
             }
@@ -72,8 +72,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelega
         guard let button = statusItem.button else { return }
         
         AppState.shared.refreshDisk()
-        AppState.shared.refreshStorage()
-        AppState.shared.refreshProcesses()
+        AppState.shared.refreshMemory()
+        if AppState.shared.selectedTab == .processes {
+            AppState.shared.refreshProcesses()
+        }
         if AppState.shared.selectedTab == .deepClean {
             AppState.shared.scanDeepClean()
         }
@@ -177,8 +179,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelega
     
     @objc private func menuRefreshClicked() {
         AppState.shared.refreshDisk()
-        AppState.shared.refreshStorage(force: true)
-        AppState.shared.refreshProcesses()
+        AppState.shared.refreshMemory()
         updateButtonTitle()
     }
     

@@ -22,51 +22,40 @@ public enum AppTab: String, CaseIterable, Identifiable {
 public final class AppState: ObservableObject {
     public static let shared = AppState()
     
-    // Tab
+    // Navigation
     @Published public var selectedTab: AppTab = .dashboard
     
-    // Storage & Files
+    // System Vitals (Reads in < 1ms via Darwin Kernel Syscalls, Zero Disk Thrashing)
     @Published public var diskInfo: DiskSpaceInfo = DiskSpaceInfo(totalBytes: 0, freeBytes: 0, usedBytes: 0)
-    @Published public var largeFiles: [LargeFileItem] = []
-    @Published public var folderBreakdown: [StorageFolderBreakdown] = []
-    @Published public var isScanningStorage = false
+    @Published public var memoryInfo: MemoryInfo = MemoryInfo(totalBytes: 0, usedBytes: 0, freeBytes: 0)
     @Published public var isCleaning = false
     @Published public var alertMessage: String?
     
-    // Deep Clean
+    // Deep Clean (Computed strictly on-demand)
     @Published public var deepCleanCategories: [CleanCategoryItem] = []
     @Published public var selectedCategories: Set<String> = ["app_caches", "installers", "system_logs", "trash_temp"]
     @Published public var isDeepCleaning = false
+    @Published public var isScanningCategories = false
     @Published public var deepCleanProgressText = ""
     @Published public var totalRecoverableBytes: Int64 = 0
     
-    // Process Monitor
+    // Process Monitor (Refreshed only when user opens tab or popover)
     @Published public var topProcesses: [ProcessInfoItem] = []
     @Published public var hasHighCPUProcess = false
-    
-    // Modals & Actions
-    @Published public var fileToTrash: LargeFileItem?
+    @Published public var isFetchingProcesses = false
     @Published public var processToKill: ProcessInfoItem?
     
-    private var diskTimer: Timer?
-    private var processTimer: Timer?
+    private var menubarTimer: Timer?
     
     private init() {
         refreshDisk()
-        refreshStorage()
-        refreshProcesses()
+        refreshMemory()
         
-        // Auto-refresh disk every 60s
-        diskTimer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { [weak self] _ in
+        // Refresh menubar title (POSIX statfs) every 60s
+        menubarTimer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.refreshDisk()
-            }
-        }
-        
-        // Auto-refresh processes every 6s
-        processTimer = Timer.scheduledTimer(withTimeInterval: 6.0, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.refreshProcesses()
+                self?.refreshMemory()
             }
         }
     }
@@ -75,28 +64,23 @@ public final class AppState: ObservableObject {
         self.diskInfo = SystemMonitor.shared.getDiskSpace()
     }
     
-    public func refreshStorage(force: Bool = false) {
-        guard !isScanningStorage else { return }
-        isScanningStorage = true
-        
-        StorageScanner.shared.scan(force: force) { [weak self] files, breakdown in
-            Task { @MainActor [weak self] in
-                guard let self = self else { return }
-                self.largeFiles = files
-                self.folderBreakdown = breakdown
-                self.isScanningStorage = false
-            }
-        }
+    public func refreshMemory() {
+        self.memoryInfo = SystemMonitor.shared.getMemoryInfo()
     }
     
     public func refreshProcesses() {
+        guard !isFetchingProcesses else { return }
+        isFetchingProcesses = true
+        
         DispatchQueue.global(qos: .utility).async { [weak self] in
             let procs = ProcessMonitor.shared.fetchTopProcesses(limit: 7)
             let highCPU = procs.contains { $0.isHighCPU && !$0.isSystemCritical }
             
             Task { @MainActor [weak self] in
-                self?.topProcesses = procs
-                self?.hasHighCPUProcess = highCPU
+                guard let self = self else { return }
+                self.topProcesses = procs
+                self.hasHighCPUProcess = highCPU
+                self.isFetchingProcesses = false
             }
         }
     }
@@ -113,13 +97,18 @@ public final class AppState: ObservableObject {
     }
     
     public func scanDeepClean() {
+        guard !isScanningCategories else { return }
+        isScanningCategories = true
+        
         DispatchQueue.global(qos: .utility).async { [weak self] in
             let cats = DeepCleaner.shared.scanCategories()
             let total = cats.reduce(0) { $0 + $1.estimatedSizeBytes }
             
             Task { @MainActor [weak self] in
-                self?.deepCleanCategories = cats
-                self?.totalRecoverableBytes = total
+                guard let self = self else { return }
+                self.deepCleanCategories = cats
+                self.totalRecoverableBytes = total
+                self.isScanningCategories = false
             }
         }
     }
@@ -139,21 +128,12 @@ public final class AppState: ObservableObject {
                 self.isDeepCleaning = false
                 self.deepCleanProgressText = ""
                 self.refreshDisk()
-                self.refreshStorage(force: true)
+                self.refreshMemory()
                 self.scanDeepClean()
                 let freedStr = ByteCountFormatter.string(fromByteCount: freedBytes, countStyle: .file)
-                self.alertMessage = "Limpeza Profunda concluída! \(freedStr) recuperados."
+                self.alertMessage = "Limpeza concluída! \(freedStr) recuperados."
             }
         }
-    }
-    
-    public func trashLargeFile(_ item: LargeFileItem) {
-        isCleaning = true
-        let success = StorageScanner.shared.trashFile(at: item.path)
-        isCleaning = false
-        refreshDisk()
-        refreshStorage(force: true)
-        alertMessage = success ? "\(item.name) movido para a Lixeira." : "Falha ao mover arquivo."
     }
     
     public func cleanQuickCaches() {
@@ -163,7 +143,7 @@ public final class AppState: ObservableObject {
                 guard let self = self else { return }
                 self.isCleaning = false
                 self.refreshDisk()
-                self.refreshStorage(force: true)
+                self.refreshMemory()
                 self.alertMessage = log
             }
         }
@@ -173,17 +153,8 @@ public final class AppState: ObservableObject {
         SystemMonitor.shared.emptyTrash { [weak self] success in
             Task { @MainActor [weak self] in
                 self?.refreshDisk()
-                self?.refreshStorage(force: true)
                 self?.alertMessage = success ? "Lixeira do macOS esvaziada!" : "Aviso ao tentar esvaziar lixeira."
             }
         }
-    }
-    
-    public func openFolder(_ path: String) {
-        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: path)
-    }
-    
-    public func revealInFinder(_ path: String) {
-        NSWorkspace.shared.selectFile(path, inFileViewerRootedAtPath: (path as NSString).deletingLastPathComponent)
     }
 }

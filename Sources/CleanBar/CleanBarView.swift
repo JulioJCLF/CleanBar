@@ -33,27 +33,6 @@ public struct CleanBarView: View {
         .frame(width: 350)
         .background(.ultraThinMaterial)
         .alert(
-            "Mover para a Lixeira?",
-            isPresented: Binding(
-                get: { state.fileToTrash != nil },
-                set: { if !$0 { state.fileToTrash = nil } }
-            )
-        ) {
-            Button("Mover para Lixeira", role: .destructive) {
-                if let file = state.fileToTrash {
-                    state.trashLargeFile(file)
-                    state.fileToTrash = nil
-                }
-            }
-            Button("Cancelar", role: .cancel) {
-                state.fileToTrash = nil
-            }
-        } message: {
-            if let file = state.fileToTrash {
-                Text("Deseja mover '\(file.name)' (\(file.sizeFormatted)) para a Lixeira? Você pode restaurá-lo se precisar.")
-            }
-        }
-        .alert(
             "Finalizar Processo?",
             isPresented: Binding(
                 get: { state.processToKill != nil },
@@ -95,7 +74,7 @@ public struct CleanBarView: View {
                     Text("CleanBar")
                         .font(.system(size: 14, weight: .bold, design: .rounded))
                         .foregroundColor(.primary)
-                    Text("Smart System Janitor")
+                    Text("Native macOS Janitor")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(.secondary)
                 }
@@ -106,8 +85,10 @@ public struct CleanBarView: View {
             HStack(spacing: 6) {
                 Button(action: {
                     state.refreshDisk()
-                    state.refreshStorage(force: true)
-                    state.refreshProcesses()
+                    state.refreshMemory()
+                    if state.selectedTab == .processes {
+                        state.refreshProcesses()
+                    }
                     if state.selectedTab == .deepClean {
                         state.scanDeepClean()
                     }
@@ -246,122 +227,79 @@ public struct CleanBarView: View {
             .padding(12)
             .glassCard()
             
-            // Large Files Card
-            VStack(alignment: .leading, spacing: 8) {
+            // Memory RAM Card (Kernel mach host_statistics)
+            VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Label("Arquivos Mais Pesados", systemImage: "doc.badge.arrow.up")
+                    Label("Memória RAM", systemImage: "memorychip.fill")
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundColor(.primary)
+                        .foregroundColor(.secondary)
                     Spacer()
-                    
-                    if state.isScanningStorage {
-                        ProgressView()
-                            .scaleEffect(0.6)
-                            .frame(width: 14, height: 14)
-                    } else {
-                        Button(action: {
-                            state.refreshStorage(force: true)
-                        }) {
-                            Text("Reescanear")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundColor(.cyan)
-                        }
-                        .buttonStyle(.plain)
-                    }
+                    Text("\(state.memoryInfo.percentUsed)% em uso")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundColor(.secondary)
                 }
                 
-                if state.largeFiles.isEmpty {
-                    Text(state.isScanningStorage ? "Buscando arquivos pesados..." : "Nenhum arquivo grande (>40MB) detectado.")
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                        .padding(.vertical, 4)
-                } else {
-                    VStack(spacing: 5) {
-                        ForEach(state.largeFiles) { file in
-                            HStack(spacing: 8) {
-                                Image(systemName: file.systemIcon)
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.cyan)
-                                    .frame(width: 18)
-                                
-                                Text(file.name)
-                                    .font(.system(size: 11, weight: .medium))
-                                    .lineLimit(1)
-                                
-                                Spacer()
-                                
-                                Text(file.sizeFormatted)
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color.primary.opacity(0.08), in: Capsule())
-                                    .foregroundColor(.secondary)
-                                
-                                Button(action: {
-                                    state.revealInFinder(file.path)
-                                }) {
-                                    Image(systemName: "folder")
-                                        .font(.system(size: 10))
-                                        .foregroundColor(.secondary)
-                                        .frame(width: 20, height: 20)
-                                }
-                                .buttonStyle(.plain)
-                                .help("Revelar no Finder")
-                                
-                                Button(action: {
-                                    state.fileToTrash = file
-                                }) {
-                                    Image(systemName: "trash")
-                                        .font(.system(size: 10))
-                                        .foregroundColor(.red.opacity(0.8))
-                                        .frame(width: 20, height: 20)
-                                }
-                                .buttonStyle(.plain)
-                                .help("Mover para Lixeira")
-                            }
-                            .padding(.vertical, 2)
-                        }
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color.primary.opacity(0.08))
+                            .frame(height: 8)
+                        
+                        Capsule()
+                            .fill(LinearGradient(
+                                colors: [Color.purple, Color.indigo, Color.blue],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            ))
+                            .frame(width: max(8, geo.size.width * CGFloat(state.memoryInfo.percentUsed) / 100.0), height: 8)
+                            .shadow(color: Color.purple.opacity(0.4), radius: 4, x: 0, y: 0)
                     }
+                }
+                .frame(height: 8)
+                
+                HStack(alignment: .firstTextBaseline) {
+                    Text(state.memoryInfo.freeFormatted)
+                        .font(.system(size: 18, weight: .heavy, design: .rounded))
+                        .foregroundColor(.primary)
+                    Text("livres de \(state.memoryInfo.totalFormatted)")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.secondary)
+                    Spacer()
                 }
             }
             .padding(12)
             .glassCard()
             
-            // Storage Breakdown Card
-            VStack(alignment: .leading, spacing: 8) {
-                Label("Distribuição de Pastas", systemImage: "chart.pie.fill")
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                    .foregroundColor(.primary)
-                
-                HStack(spacing: 6) {
-                    ForEach(state.folderBreakdown) { folder in
-                        Button(action: {
-                            state.openFolder(folder.path)
-                        }) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: folder.icon)
-                                        .font(.system(size: 9))
-                                        .foregroundColor(.cyan)
-                                    Text(folder.name)
-                                        .font(.system(size: 10, weight: .medium))
-                                        .lineLimit(1)
-                                }
-                                Text(folder.sizeFormatted)
-                                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                                    .foregroundColor(.primary)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(8)
-                            .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Color.white.opacity(0.08), lineWidth: 0.8))
-                        }
-                        .buttonStyle(.plain)
+            // Deep Clean Callout Card
+            Button(action: {
+                state.selectedTab = .deepClean
+                state.scanDeepClean()
+            }) {
+                HStack(spacing: 10) {
+                    Image(systemName: "wand.and.stars")
+                        .font(.system(size: 18))
+                        .foregroundColor(.cyan)
+                        .frame(width: 30)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Limpeza Profunda do macOS")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.primary)
+                        Text("Caches de apps, instaladores esquecidos e logs")
+                            .font(.system(size: 9))
+                            .foregroundColor(.secondary)
                     }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.secondary)
                 }
+                .padding(12)
+                .glassCard()
             }
-            .padding(12)
-            .glassCard()
+            .buttonStyle(.plain)
             
             // Quick Actions Pills
             HStack(spacing: 8) {
@@ -415,13 +353,14 @@ public struct CleanBarView: View {
                 Button(action: {
                     state.scanDeepClean()
                 }) {
-                    Label("Reescanear", systemImage: "arrow.triangle.2.circlepath")
+                    Label(state.isScanningCategories ? "Analisando..." : "Reescanear", systemImage: "arrow.triangle.2.circlepath")
                         .font(.system(size: 10, weight: .semibold))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 5)
                         .glassButton()
                 }
                 .buttonStyle(.plain)
+                .disabled(state.isScanningCategories)
             }
             .padding(12)
             .glassCard()
@@ -552,67 +491,86 @@ public struct CleanBarView: View {
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .foregroundColor(.primary)
                     Spacer()
-                    Text("Auto 6s")
-                        .font(.system(size: 9))
-                        .foregroundColor(.secondary)
+                    
+                    if state.isFetchingProcesses {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                            .frame(width: 14, height: 14)
+                    } else {
+                        Button(action: {
+                            state.refreshProcesses()
+                        }) {
+                            Text("Atualizar")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundColor(.cyan)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
                 
-                VStack(spacing: 4) {
-                    ForEach(state.topProcesses) { proc in
-                        HStack(spacing: 8) {
-                            Text(proc.name)
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(proc.isSystemCritical ? .secondary : .primary)
-                                .lineLimit(1)
-                            
-                            if proc.isSystemCritical {
-                                Text("macOS")
-                                    .font(.system(size: 8, weight: .bold))
-                                    .padding(.horizontal, 4)
-                                    .padding(.vertical, 1)
-                                    .background(Color.primary.opacity(0.06), in: Capsule())
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            Spacer()
-                            
-                            // CPU Bar
-                            GeometryReader { barGeo in
-                                ZStack(alignment: .leading) {
-                                    Capsule()
-                                        .fill(Color.primary.opacity(0.06))
-                                        .frame(height: 5)
-                                    
-                                    Capsule()
-                                        .fill(proc.isHighCPU ? Color.red : Color.cyan)
-                                        .frame(width: max(3, barGeo.size.width * CGFloat(min(proc.cpuPercent, 100.0)) / 100.0), height: 5)
+                if state.topProcesses.isEmpty {
+                    Text("Nenhum processo pesado no momento.")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                        .padding(.vertical, 6)
+                } else {
+                    VStack(spacing: 4) {
+                        ForEach(state.topProcesses) { proc in
+                            HStack(spacing: 8) {
+                                Text(proc.name)
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(proc.isSystemCritical ? .secondary : .primary)
+                                    .lineLimit(1)
+                                
+                                if proc.isSystemCritical {
+                                    Text("macOS")
+                                        .font(.system(size: 8, weight: .bold))
+                                        .padding(.horizontal, 4)
+                                        .padding(.vertical, 1)
+                                        .background(Color.primary.opacity(0.06), in: Capsule())
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                Spacer()
+                                
+                                // CPU Bar
+                                GeometryReader { barGeo in
+                                    ZStack(alignment: .leading) {
+                                        Capsule()
+                                            .fill(Color.primary.opacity(0.06))
+                                            .frame(height: 5)
+                                        
+                                        Capsule()
+                                            .fill(proc.isHighCPU ? Color.red : Color.cyan)
+                                            .frame(width: max(3, barGeo.size.width * CGFloat(min(proc.cpuPercent, 100.0)) / 100.0), height: 5)
+                                    }
+                                }
+                                .frame(width: 50, height: 5)
+                                
+                                Text(String(format: "%4.1f%%", proc.cpuPercent))
+                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                    .foregroundColor(proc.isHighCPU ? .red : .secondary)
+                                    .frame(width: 42, alignment: .trailing)
+                                
+                                if !proc.isSystemCritical {
+                                    Button(action: {
+                                        state.processToKill = proc
+                                    }) {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.red.opacity(0.7))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("Finalizar processo")
+                                } else {
+                                    Image(systemName: "lock.fill")
+                                        .font(.system(size: 9))
+                                        .foregroundColor(.secondary.opacity(0.4))
+                                        .frame(width: 12)
                                 }
                             }
-                            .frame(width: 50, height: 5)
-                            
-                            Text(String(format: "%4.1f%%", proc.cpuPercent))
-                                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                .foregroundColor(proc.isHighCPU ? .red : .secondary)
-                                .frame(width: 42, alignment: .trailing)
-                            
-                            if !proc.isSystemCritical {
-                                Button(action: {
-                                    state.processToKill = proc
-                                }) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.red.opacity(0.7))
-                                }
-                                .buttonStyle(.plain)
-                                .help("Finalizar processo")
-                            } else {
-                                Image(systemName: "lock.fill")
-                                    .font(.system(size: 9))
-                                    .foregroundColor(.secondary.opacity(0.4))
-                                    .frame(width: 12)
-                            }
+                            .padding(.vertical, 3)
                         }
-                        .padding(.vertical, 3)
                     }
                 }
             }

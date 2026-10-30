@@ -53,10 +53,10 @@ Most utilities designed to solve this are either **heavy Electron applications**
 
 <div align="center">
 
-| 📊 1. Overview & Heavy Files | 🧼 2. Deep System Cleaning | ⚡ 3. CPU Sentinel & Process Killer |
+| 📊 1. Overview & System Vitals | 🧼 2. Deep System Cleaning | ⚡ 3. CPU Sentinel & Process Killer |
 |:---:|:---:|:---:|
 | <img src="assets/cleanbar-dashboard.png" width="280" alt="Dashboard" /> | <img src="assets/cleanbar-deepclean.png" width="280" alt="Deep Clean" /> | <img src="assets/cleanbar-processes.png" width="280" alt="Processes" /> |
-| Real-time SSD gauge, heavy files finder & storage folder breakdown | 4-category granular purge for app caches, installers, logs & trash | Real-time CPU monitor with instant kill switch for runaway loops |
+| Real-time SSD & RAM monitors with 1-click quick cache clean & trash empty | 4-category granular purge for app caches, installers, logs & trash | Real-time CPU monitor with instant kill switch for runaway loops |
 
 </div>
 
@@ -64,11 +64,11 @@ Most utilities designed to solve this are either **heavy Electron applications**
 
 ## ✨ Features at a Glance
 
-### 1. 📊 Real-Time Storage & Heavy File Manager
+### 1. 📊 Real-Time Storage & System Vitals
 - **Zero-Lag SSD Gauge**: Reads disk metrics directly from Darwin POSIX syscalls (`statfs`) in microseconds—never freezes your menu bar or waits on slow APFS background daemons.
-- **Heavy Files Finder**: Automatically surfaces your largest files (>40 MB) across Downloads, Desktop, Movies, and Documents with 1-click Reveal in Finder or Trash.
-- **Folder Storage Breakdown**: Visual overview of how much space Downloads, Application Caches, Documents, and Trash are consuming.
-- **Quick Maintenance**: One-tap shortcuts for quick app cache purge and emptying macOS Trash.
+- **Kernel-Level RAM Monitor**: Real-time memory consumption (Active, Wired, Compressed vs. Free) queried directly from Mach kernel statistics (`host_statistics64`) with 0% CPU overhead.
+- **Quick Maintenance**: One-tap shortcuts for quick app & browser cache purge and emptying macOS Trash.
+- **Zero Background Disk Thrashing**: No background file crawlers or continuous indexing—the app stays asleep until you click it.
 
 ### 2. 🧼 Deep System Cleaning
 - **Application & Browser Caches**: Deep-scans `~/Library/Caches` to safely remove cached data from Chrome, Safari, Spotify, Slack, Discord, and third-party apps.

@@ -25,6 +25,26 @@ public struct DiskSpaceInfo: Sendable {
     }
 }
 
+public struct MemoryInfo: Sendable {
+    public let totalBytes: UInt64
+    public let usedBytes: UInt64
+    public let freeBytes: UInt64
+    
+    public var usedFormatted: String {
+        ByteCountFormatter.string(fromByteCount: Int64(usedBytes), countStyle: .memory)
+    }
+    public var freeFormatted: String {
+        ByteCountFormatter.string(fromByteCount: Int64(freeBytes), countStyle: .memory)
+    }
+    public var totalFormatted: String {
+        ByteCountFormatter.string(fromByteCount: Int64(totalBytes), countStyle: .memory)
+    }
+    public var percentUsed: Int {
+        guard totalBytes > 0 else { return 0 }
+        return Int((Double(usedBytes) / Double(totalBytes)) * 100.0)
+    }
+}
+
 public final class SystemMonitor: @unchecked Sendable {
     public static let shared = SystemMonitor()
     
@@ -39,6 +59,32 @@ public final class SystemMonitor: @unchecked Sendable {
             return DiskSpaceInfo(totalBytes: total, freeBytes: free, usedBytes: used)
         }
         return DiskSpaceInfo(totalBytes: 0, freeBytes: 0, usedBytes: 0)
+    }
+    
+    public func getMemoryInfo() -> MemoryInfo {
+        let totalMem = ProcessInfo.processInfo.physicalMemory
+        var pageSize: vm_size_t = 0
+        host_page_size(mach_host_self(), &pageSize)
+        
+        var vmStats = vm_statistics64()
+        var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64>.size / MemoryLayout<integer_t>.size)
+        
+        let kerr = withUnsafeMutablePointer(to: &vmStats) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                host_statistics64(mach_host_self(), HOST_VM_INFO64, $0, &count)
+            }
+        }
+        
+        if kerr == KERN_SUCCESS {
+            let active = UInt64(vmStats.active_count) * UInt64(pageSize)
+            let wired = UInt64(vmStats.wire_count) * UInt64(pageSize)
+            let compressed = UInt64(vmStats.compressor_page_count) * UInt64(pageSize)
+            let usedMem = active + wired + compressed
+            let freeMem = totalMem > usedMem ? totalMem - usedMem : 0
+            return MemoryInfo(totalBytes: totalMem, usedBytes: usedMem, freeBytes: freeMem)
+        }
+        
+        return MemoryInfo(totalBytes: totalMem, usedBytes: 0, freeBytes: totalMem)
     }
     
     public func emptyTrash(completion: @escaping @Sendable (Bool) -> Void) {
@@ -67,23 +113,20 @@ public final class SystemMonitor: @unchecked Sendable {
     
     public func runQuickCacheClean(progress: @escaping @Sendable (String) -> Void, completion: @escaping @Sendable (String) -> Void) {
         DispatchQueue.global(qos: .userInitiated).async {
-            progress("Limpando caches de navegação e temporários...")
+            progress("Limpando caches de navegadores e aplicativos...")
             
             let home = NSHomeDirectory()
             let cachesPath = (home as NSString).appendingPathComponent("Library/Caches")
             let fm = FileManager.default
             
-            var clearedItems = 0
             if let items = try? fm.contentsOfDirectory(atPath: cachesPath) {
                 for item in items {
-                    // Safe browser and common app caches
                     let lower = item.lowercased()
                     if lower.contains("chrome") || lower.contains("spotify") || lower.contains("slack") ||
                        lower.contains("discord") || lower.contains("arc") || lower.contains("dia") ||
                        lower.contains("firefox") || lower.contains("brave") {
                         let itemPath = (cachesPath as NSString).appendingPathComponent(item)
                         try? fm.removeItem(atPath: itemPath)
-                        clearedItems += 1
                     }
                 }
             }
@@ -110,8 +153,8 @@ public final class SystemMonitor: @unchecked Sendable {
         
         do {
             try task.run()
-            task.waitUntilExit()
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            task.waitUntilExit()
             return String(data: data, encoding: .utf8) ?? ""
         } catch {
             return "Erro: \(error.localizedDescription)"
