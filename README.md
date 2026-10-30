@@ -89,8 +89,8 @@ Most utilities designed to solve this are either **heavy Electron applications**
 | Feature | CleanBar 🍏 | CleanMyMac | Electron Cleaners |
 | :--- | :---: | :---: | :---: |
 | **Engine** | **Native Swift 6 + SwiftUI** | Objective-C / Swift | Electron / Web Technologies |
-| **App Size** | **471 KB** | ~150 MB | 120–250 MB |
-| **Idle Memory (RAM)** | **< 45 MB** | 120–200 MB | 300–600 MB |
+| **App Size** | **355 KB** | ~150 MB | 120–250 MB |
+| **Idle Memory (RAM)** | **< 35 MB** | 120–200 MB | 300–600 MB |
 | **Idle CPU Usage** | **0.0%** | Background Daemon | 1.0–4.0% |
 | **Price** | **100% Free & Open Source** | $39.95 / year | Subscription / Freemium |
 | **Design** | **Native Frosted Glass Popover** | Custom Window | Web HTML/CSS |
@@ -101,7 +101,7 @@ Most utilities designed to solve this are either **heavy Electron applications**
 ## 📥 Installation
 
 ### Option 1: Direct Download (Pre-built Universal Binary)
-1. Download `CleanBar-v1.0.0-macOS-Universal.zip` from the **[Latest Release](https://github.com/JulioJCLF/CleanBar/releases/latest)**.
+1. Download `CleanBar-v1.0.1-macOS-Universal.zip` from the **[Latest Release](https://github.com/JulioJCLF/CleanBar/releases/latest)**.
 2. Unzip and drag `CleanBar.app` into your **Applications** folder (`/Applications`).
 3. Launch `CleanBar`—the sparkles icon (`✨`) will appear in your top menu bar!
 
