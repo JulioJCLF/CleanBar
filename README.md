@@ -7,9 +7,15 @@
 
 [![Release](https://img.shields.io/github/v/release/JulioJCLF/CleanBar?style=for-the-badge&color=00c8ff)](https://github.com/JulioJCLF/CleanBar/releases/latest)
 [![macOS](https://img.shields.io/badge/macOS-13.0%2B-blue?style=for-the-badge&logo=apple)](https://github.com/JulioJCLF/CleanBar)
-[![Architecture](https://img.shields.io/badge/Architecture-Universal%20(Apple%20Silicon%20%2B%20Intel)-purple?style=for-the-badge)](https://github.com/JulioJCLF/CleanBar/releases/latest)
+[![Architecture](https://img.shields.io/badge/Architecture-Universal-purple?style=for-the-badge)](https://github.com/JulioJCLF/CleanBar/releases/latest)
 [![Swift](https://img.shields.io/badge/Swift-6.0-F05138?style=for-the-badge&logo=swift)](https://swift.org)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+
+<br/>
+
+![Views](https://komarev.com/ghpvc/?username=JulioJCLF-CleanBar&label=Repo%20Views&color=00c8ff&style=for-the-badge)
+[![Downloads](https://img.shields.io/github/downloads/JulioJCLF/CleanBar/total?style=for-the-badge&color=blue&logo=apple)](https://github.com/JulioJCLF/CleanBar/releases/latest)
+[![Stars](https://img.shields.io/github/stars/JulioJCLF/CleanBar?style=for-the-badge&color=gold&logo=github)](https://github.com/JulioJCLF/CleanBar/stargazers)
 
 <br/>
 
