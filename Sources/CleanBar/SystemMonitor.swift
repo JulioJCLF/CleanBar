@@ -43,17 +43,24 @@ public final class SystemMonitor: @unchecked Sendable {
     
     public func emptyTrash(completion: @escaping @Sendable (Bool) -> Void) {
         DispatchQueue.global(qos: .userInitiated).async {
-            let script = "tell application \"Finder\" to empty trash"
-            var error: NSDictionary?
-            if let appleScript = NSAppleScript(source: script) {
-                appleScript.executeAndReturnError(&error)
-                DispatchQueue.main.async {
-                    completion(error == nil)
+            let home = NSHomeDirectory()
+            let trashPath = (home as NSString).appendingPathComponent(".Trash")
+            let fm = FileManager.default
+            var success = true
+            
+            if let items = try? fm.contentsOfDirectory(atPath: trashPath) {
+                for item in items {
+                    let p = (trashPath as NSString).appendingPathComponent(item)
+                    do {
+                        try fm.removeItem(atPath: p)
+                    } catch {
+                        success = false
+                    }
                 }
-            } else {
-                DispatchQueue.main.async {
-                    completion(false)
-                }
+            }
+            
+            DispatchQueue.main.async {
+                completion(success)
             }
         }
     }

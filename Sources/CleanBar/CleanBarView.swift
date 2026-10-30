@@ -120,10 +120,10 @@ public struct CleanBarView: View {
                         .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.8))
                 }
                 .buttonStyle(.plain)
-                .help("Atualizar status")
+                .help("Atualizar dados")
                 
                 Button(action: {
-                    NSApplication.shared.terminate(nil)
+                    AppDelegate.shared?.closePopover()
                 }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 10, weight: .semibold))
@@ -133,7 +133,20 @@ public struct CleanBarView: View {
                         .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.8))
                 }
                 .buttonStyle(.plain)
-                .help("Encerrar CleanBar")
+                .help("Fechar painel (ESC)")
+                
+                Button(action: {
+                    NSApplication.shared.terminate(nil)
+                }) {
+                    Image(systemName: "power")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.red.opacity(0.8))
+                        .frame(width: 24, height: 24)
+                        .background(.ultraThinMaterial, in: Circle())
+                        .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.8))
+                }
+                .buttonStyle(.plain)
+                .help("Sair do CleanBar")
             }
         }
         .padding(.horizontal, 2)

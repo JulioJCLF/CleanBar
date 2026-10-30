@@ -253,6 +253,14 @@ public final class DeepCleaner: @unchecked Sendable {
         
         do {
             try task.run()
+            
+            // Timeout safety: kill if du hangs more than 1.5s
+            DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + 1.5) {
+                if task.isRunning {
+                    task.terminate()
+                }
+            }
+            
             task.waitUntilExit()
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
             if let output = String(data: data, encoding: .utf8),

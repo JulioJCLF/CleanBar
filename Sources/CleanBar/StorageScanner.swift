@@ -116,8 +116,7 @@ public final class StorageScanner: @unchecked Sendable {
             (home as NSString).appendingPathComponent("Downloads"),
             (home as NSString).appendingPathComponent("Desktop"),
             (home as NSString).appendingPathComponent("Movies"),
-            (home as NSString).appendingPathComponent("Documents"),
-            (home as NSString).appendingPathComponent("video")
+            (home as NSString).appendingPathComponent("Music")
         ]
         
         var results: [LargeFileItem] = []
@@ -162,7 +161,7 @@ public final class StorageScanner: @unchecked Sendable {
         let targets: [(name: String, path: String, icon: String)] = [
             ("Downloads", (home as NSString).appendingPathComponent("Downloads"), "arrow.down.circle"),
             ("Caches de Apps", (home as NSString).appendingPathComponent("Library/Caches"), "shippingbox"),
-            ("Documentos", (home as NSString).appendingPathComponent("Documents"), "folder"),
+            ("Filmes & Mídia", (home as NSString).appendingPathComponent("Movies"), "film"),
             ("Lixeira", (home as NSString).appendingPathComponent(".Trash"), "trash")
         ]
         
@@ -200,6 +199,14 @@ public final class StorageScanner: @unchecked Sendable {
         
         do {
             try task.run()
+            
+            // Timeout safety: kill if du hangs more than 1.5s
+            DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + 1.5) {
+                if task.isRunning {
+                    task.terminate()
+                }
+            }
+            
             task.waitUntilExit()
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
             if let output = String(data: data, encoding: .utf8),
