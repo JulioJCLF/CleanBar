@@ -52,36 +52,30 @@ Feedbacks e contribuições são muito bem-vindos! Se curtir a iniciativa, deixe
 
 ---
 
-## 🌐 3. Post para o LinkedIn (Versão em Inglês 🇺🇸 - Alcance Global)
+## 🌐 3. Post para o LinkedIn (Versão em Inglês 🇺🇸 - Direto & Atualizações de Hoje)
 
 ### 📌 Copy & paste:
 
-Tired of $40/year subscriptions for disk cleaners and bloated Electron apps idling at 400MB of RAM, I built my own native, zero-bloat macOS companion: meet **CleanBar** 🍏✨
+Quick update on CleanBar — my open-source macOS system monitor and janitor utility. Just tagged v1.1.0 with a major set of architectural updates today:
 
-Anyone daily-driving a Mac with 256GB or 512GB SSD knows the drill:
-• Browser caches (Chrome, Safari, Arc), Spotify, and Slack quietly swell into tens of gigabytes;
-• Leftover installer disk images (.dmg, .pkg) linger forgotten in Downloads;
-• Stale diagnostic crash reports and system logs silently waste gigabytes;
-• Runaway background processes spike CPU cores, heat up the chassis, and drain battery life.
+🖥️ Desktop App Window: Evolved CleanBar from a menu-bar-only popover into a standalone macOS window application with a dedicated sidebar, interactive telemetry cards, and process management (while keeping the lightweight menu bar companion).
 
-To solve this with zero overhead, I built **CleanBar** — a complete **standalone desktop application + instant menu bar companion**, written 100% in pure **Swift 6, SwiftUI, and AppKit**.
+⚡ 0.0% Idle CPU & ~32MB RAM: Replaced software render loops with hardware-accelerated CoreAnimation / Metal compositing on the GPU. When the window is closed or occluded, it calls Darwin’s `malloc_zone_pressure_relief` syscall to return unused heap pages back to the kernel.
 
-### 🛠️ Key Technical Highlights:
-1. **0.0% Idle CPU**: Replaced software tick loops with hardware-accelerated **CoreAnimation / Metal GPU compositing**. The app never wakes the CPU while idling.
-2. **Tiny Memory Footprint (~33 MB RAM)**: Pure native code with zero third-party dependencies. When minimized or closed, it triggers Darwin's `malloc_zone_pressure_relief` syscall to return free heap pages directly to the kernel.
-3. **Microsecond Kernel Telemetry**: SSD capacity is read directly via POSIX `statfs` syscalls, and RAM breakdown is queried from Mach kernel statistics (`host_statistics64`) without slow disk indexing.
-4. **Safe Deletions**: Residual downloads are safely routed through macOS Native Trash (`FileManager.trashItem`), meaning you can always "Put Back" any file if cleaned by mistake.
-5. **Universal 2 & Bilingual**: Runs natively on both Apple Silicon (M1/M2/M3/M4) and Intel Macs, with instant runtime switching between English 🇺🇸 and Portuguese 🇧🇷.
+🔒 One-Time Permission Setup: Fixed macOS repeatedly asking for folder permissions by codesigning with a persistent designated requirement (`com.jclf.cleanbar`) and adding a 1-click Full Disk Access helper in Settings.
 
-CleanBar is **100% Free and Open Source under the MIT License**.
+🛡️ Safe Deletions: Cleaning now routes leftover downloads through macOS Native Trash (`FileManager.trashItem`) instead of unrecoverable deletion, so files can always be restored via "Put Back".
 
-If you use a Mac or enjoy exploring clean Swift engineering, check it out here:
+🌐 Bilingual: Added instant 1-click runtime switching between English and Portuguese.
 
-🔗 **GitHub & Release Download**: https://github.com/JulioJCLF/CleanBar
+Built with 100% native Swift 6, SwiftUI, and AppKit (zero external dependencies).
 
-Feedback and pull requests are very welcome! If you find it useful, a star ⭐ on GitHub means the world! 🚀
+Source code and Universal 2 binary (Apple Silicon + Intel) are on GitHub:
+🔗 https://github.com/JulioJCLF/CleanBar
 
-#macOS #Swift #SwiftUI #OpenSource #Apple #SoftwareArchitecture #IndieDev #Programming
+Would love to hear feedback or thoughts from other Mac / Swift developers!
+
+#macOS #Swift #SwiftUI #OpenSource #SoftwareEngineering #IndieDev
 
 ---
 
