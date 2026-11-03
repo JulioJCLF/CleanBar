@@ -3,6 +3,7 @@ import AppKit
 
 public struct CleanBarMainWindowView: View {
     @ObservedObject var state = AppState.shared
+    @ObservedObject var permissions = PermissionsManager.shared
     @Namespace private var navNamespace
     
     public init() {}
@@ -559,6 +560,41 @@ public struct CleanBarMainWindowView: View {
     // MARK: - 2. Deep Clean View
     private var deepCleanView: some View {
         VStack(spacing: 18) {
+            // One-Time Permission Guidance Banner (Shown if Full Disk Access is not active)
+            if !permissions.hasFullDiskAccess {
+                HStack(spacing: 12) {
+                    Image(systemName: "hand.raised.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(.cyan)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(state.strings.permissionBannerTitle)
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.primary)
+                        Text(state.strings.permissionBannerSubtitle)
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Button(action: {
+                        state.triggerHaptic()
+                        permissions.openFullDiskAccessSettings()
+                    }) {
+                        Text(state.strings.openSettingsButton)
+                            .font(.system(size: 11, weight: .semibold))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .polishedGlassButton(isHighlighted: true)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(12)
+                .background(Color.cyan.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.cyan.opacity(0.3), lineWidth: 0.8)
+                )
+            }
+            
             // Reclaimable Hero Banner
             HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
@@ -1098,6 +1134,105 @@ public struct CleanBarMainWindowView: View {
                     }
                 }
                 .toggleStyle(.checkbox)
+            }
+            .padding(18)
+            .polishedGlassCard(cornerRadius: 14)
+            
+            // Permissions & Privacy Card
+            VStack(alignment: .leading, spacing: 14) {
+                Text(state.strings.permissionsSection)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.primary)
+                
+                Text(state.strings.permissionsDescription)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                
+                // Full Disk Access (1-Click Permanent Solution)
+                HStack(spacing: 12) {
+                    Image(systemName: "lock.shield.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(permissions.hasFullDiskAccess ? .green : .cyan)
+                        .frame(width: 28)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text(state.strings.fullDiskAccessTitle)
+                                .font(.system(size: 12, weight: .semibold))
+                            if permissions.hasFullDiskAccess {
+                                Text(state.strings.grantedBadge)
+                                    .font(.system(size: 10, weight: .bold))
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.green.opacity(0.15), in: Capsule())
+                                    .foregroundColor(.green)
+                            }
+                        }
+                        Text(state.strings.fullDiskAccessSubtitle)
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        state.triggerHaptic()
+                        permissions.openFullDiskAccessSettings()
+                    }) {
+                        Text(state.strings.openSettingsButton)
+                            .font(.system(size: 11, weight: .semibold))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .polishedGlassButton(isHighlighted: true)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(12)
+                .background(Color.primary.opacity(0.03), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                
+                // Downloads Access
+                HStack(spacing: 12) {
+                    Image(systemName: "arrow.down.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(permissions.hasDownloadsAccess ? .green : .orange)
+                        .frame(width: 28)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text(state.strings.downloadsAccessTitle)
+                                .font(.system(size: 12, weight: .semibold))
+                            if permissions.hasDownloadsAccess {
+                                Text(state.strings.grantedBadge)
+                                    .font(.system(size: 10, weight: .bold))
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.green.opacity(0.15), in: Capsule())
+                                    .foregroundColor(.green)
+                            }
+                        }
+                        Text(state.strings.downloadsAccessSubtitle)
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    if !permissions.hasDownloadsAccess {
+                        Button(action: {
+                            state.triggerHaptic()
+                            permissions.requestDownloadsAccess()
+                        }) {
+                            Text(state.strings.grantButton)
+                                .font(.system(size: 11, weight: .semibold))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .polishedGlassButton(isHighlighted: false)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(12)
+                .background(Color.primary.opacity(0.03), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
             .padding(18)
             .polishedGlassCard(cornerRadius: 14)

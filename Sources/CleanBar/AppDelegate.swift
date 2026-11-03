@@ -56,6 +56,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelega
         return true
     }
     
+    public func applicationDidBecomeActive(_ notification: Notification) {
+        PermissionsManager.shared.checkPermissions()
+    }
+    
     // MARK: - Window Management
     
     public func showMainWindow() {

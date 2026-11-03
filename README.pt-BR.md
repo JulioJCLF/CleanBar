@@ -139,7 +139,7 @@ cp .build/out/Products/Release/CleanBar /tmp/CleanBar_x86_64
 
 # Empacotar no Aplicativo Universal
 lipo -create -output CleanBar.app/Contents/MacOS/CleanBar /tmp/CleanBar_arm64 /tmp/CleanBar_x86_64
-codesign --force --deep -s - CleanBar.app
+codesign --force --deep -s - -r '=designated => identifier "com.jclf.cleanbar"' CleanBar.app
 ```
 
 ---

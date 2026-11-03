@@ -240,4 +240,34 @@ public struct Strings {
     public var nativeBadge: String { lang == .english ? "Native • Swift 6.4 + SwiftUI + AppKit • Zero Electron" : "Nativo • Swift 6.4 + SwiftUI + AppKit • Sem Electron" }
     public var mitLicense: String { lang == .english ? "Distributed under the MIT Open Source License." : "Distribuído sob a licença MIT Open Source." }
     public var githubRepo: String { lang == .english ? "GitHub Repository" : "Repositório GitHub" }
+    
+    // MARK: - Permissions
+    public var permissionsSection: String { lang == .english ? "System Permissions & Privacy" : "Permissões do Sistema & Privacidade" }
+    public var permissionsDescription: String {
+        lang == .english
+            ? "Grant permission once so CleanBar can scan caches and trash silently without repeated macOS prompts."
+            : "Conceda permissão uma única vez para o CleanBar analisar caches e lixeira silenciosamente, sem confirmações repetidas do macOS."
+    }
+    public var fullDiskAccessTitle: String { lang == .english ? "Full Disk Access (Recommended)" : "Acesso Total ao Disco (Recomendado)" }
+    public var fullDiskAccessSubtitle: String {
+        lang == .english
+            ? "Enables complete, silent analysis of all caches, logs, and downloads with zero popups."
+            : "Permite a análise completa e silenciosa de todos os caches, logs e instaladores sem janelas de confirmação."
+    }
+    public var openSettingsButton: String { lang == .english ? "Open System Settings" : "Abrir Ajustes do Sistema" }
+    public var downloadsAccessTitle: String { lang == .english ? "Downloads Folder Access" : "Acesso à Pasta Downloads" }
+    public var downloadsAccessSubtitle: String {
+        lang == .english
+            ? "Required to detect and clean residual .dmg and .pkg installers."
+            : "Necessário para identificar e limpar instaladores residuais (.dmg e .pkg)."
+    }
+    public var grantedBadge: String { lang == .english ? "Granted" : "Concedido" }
+    public var notGrantedBadge: String { lang == .english ? "Not Configured" : "Não Configurado" }
+    public var grantButton: String { lang == .english ? "Authorize" : "Autorizar" }
+    public var permissionBannerTitle: String { lang == .english ? "💡 Silent 1-Time Setup" : "💡 Configuração de Permissão Única" }
+    public var permissionBannerSubtitle: String {
+        lang == .english
+            ? "Enable 'Full Disk Access' once in System Settings so macOS never prompts for folder permissions again."
+            : "Ative o 'Acesso Total ao Disco' uma vez nos Ajustes do Sistema para que o macOS nunca mais peça permissão de pastas."
+    }
 }

@@ -33,7 +33,7 @@ jobs:
         run: |
           lipo -create -output CleanBar.app/Contents/MacOS/CleanBar /tmp/bin/CleanBar_arm64 /tmp/bin/CleanBar_x86_64
           chmod +x CleanBar.app/Contents/MacOS/CleanBar
-          codesign --force --deep -s - CleanBar.app
+          codesign --force --deep -s - -r '=designated => identifier "com.jclf.cleanbar"' CleanBar.app
           mkdir -p dist
           ZIP_NAME="CleanBar-${{ github.ref_name }}-macOS-Universal.zip"
           zip -r -y "dist/${ZIP_NAME}" CleanBar.app

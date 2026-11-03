@@ -28,5 +28,15 @@
     <false/>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSDownloadsFolderUsageDescription</key>
+    <string>CleanBar precisa de acesso à pasta Downloads para detectar e limpar instaladores (.dmg, .pkg) residuais com segurança.</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>CleanBar utiliza automação com o Finder para esvaziar a Lixeira do macOS com segurança e som nativo.</string>
+    <key>NSDesktopFolderUsageDescription</key>
+    <string>CleanBar analisa arquivos residuais para otimizar o espaço em disco.</string>
+    <key>NSDocumentsFolderUsageDescription</key>
+    <string>CleanBar analisa o uso de armazenamento em disco.</string>
+    <key>NSSystemAdministrationUsageDescription</key>
+    <string>CleanBar gerencia limpeza de caches e renovação de rede do macOS.</string>
 </dict>
 </plist>
