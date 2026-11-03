@@ -62,6 +62,18 @@ public final class DeepCleaner: @unchecked Sendable {
             estimatedSizeBytes: trashSize
         ))
         
+        // 5. Developer Caches (Xcode DerivedData)
+        let devSize = calculateDeveloperCacheSize()
+        if devSize > 0 {
+            categories.append(CleanCategoryItem(
+                key: "developer_caches",
+                title: "Caches de Desenvolvimento (Xcode)",
+                icon: "hammer.fill",
+                subtitle: "DerivedData do Xcode e artefatos de compilação",
+                estimatedSizeBytes: devSize
+            ))
+        }
+        
         return categories
     }
     
@@ -112,6 +124,17 @@ public final class DeepCleaner: @unchecked Sendable {
                 let freed = max(0, before - after)
                 freedBytes += freed
                 summary += "Lixeira & Temp: \(ByteCountFormatter.string(fromByteCount: freed, countStyle: .file))\n"
+            }
+            
+            // 5. Developer Caches
+            if categories.contains("developer_caches") {
+                progress("Limpando caches de compilação do Xcode...")
+                let before = self.calculateDeveloperCacheSize()
+                self.cleanDeveloperCaches()
+                let after = self.calculateDeveloperCacheSize()
+                let freed = max(0, before - after)
+                freedBytes += freed
+                summary += "Caches de Dev: \(ByteCountFormatter.string(fromByteCount: freed, countStyle: .file))\n"
             }
             
             DispatchQueue.main.async {
@@ -169,9 +192,35 @@ public final class DeepCleaner: @unchecked Sendable {
     }
     
     private func calculateTrashSize() -> Int64 {
-        let home = NSHomeDirectory()
-        let trashPath = (home as NSString).appendingPathComponent(".Trash")
-        return fastDirectorySize(trashPath, maxDepth: 2)
+        let script = """
+        tell application "Finder"
+            set totalBytes to 0
+            repeat with anItem in (get items of trash)
+                try
+                    set totalBytes to totalBytes + (size of anItem)
+                end try
+            end repeat
+            return totalBytes
+        end tell
+        """
+        let task = Process()
+        task.launchPath = "/usr/bin/osascript"
+        task.arguments = ["-e", script]
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = Pipe()
+        
+        do {
+            try task.run()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            task.waitUntilExit()
+            if let str = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+               let bytes = Int64(str) {
+                return bytes
+            }
+        } catch {}
+        
+        return 0
     }
     
     // MARK: - Cleaners
@@ -232,19 +281,29 @@ public final class DeepCleaner: @unchecked Sendable {
     }
     
     private func cleanTrashAndTemp() {
+        let sema = DispatchSemaphore(value: 0)
+        SystemMonitor.shared.emptyTrash { _, _ in
+            sema.signal()
+        }
+        _ = sema.wait(timeout: .now() + 5.0)
+    }
+    
+    private func calculateDeveloperCacheSize() -> Int64 {
         let home = NSHomeDirectory()
-        let trashPath = (home as NSString).appendingPathComponent(".Trash")
+        let derivedData = (home as NSString).appendingPathComponent("Library/Developer/Xcode/DerivedData")
+        return fastDirectorySize(derivedData, maxDepth: 2)
+    }
+    
+    private func cleanDeveloperCaches() {
+        let home = NSHomeDirectory()
+        let derivedData = (home as NSString).appendingPathComponent("Library/Developer/Xcode/DerivedData")
         let fm = FileManager.default
-        
-        if let items = try? fm.contentsOfDirectory(atPath: trashPath) {
+        if let items = try? fm.contentsOfDirectory(atPath: derivedData) {
             for item in items {
-                let itemPath = (trashPath as NSString).appendingPathComponent(item)
+                let itemPath = (derivedData as NSString).appendingPathComponent(item)
                 try? fm.removeItem(atPath: itemPath)
             }
         }
-        
-        // Also run Finder empty trash as standard macOS cleanup
-        SystemMonitor.shared.emptyTrash { _ in }
     }
     
     // Fast, non-blocking native directory size calculation (Zero child processes, zero pipe deadlock)

@@ -3,26 +3,71 @@ import AppKit
 
 public struct CleanBarView: View {
     @ObservedObject var state = AppState.shared
+    @Namespace private var popoverTabNamespace
     
     public init() {}
+    
+    // Core tabs visible in the compact popover
+    private var popoverTabs: [AppTab] {
+        [.dashboard, .deepClean, .processes]
+    }
     
     public var body: some View {
         VStack(spacing: 12) {
             // MARK: - Header
             headerView
             
-            // MARK: - Segmented Tab Bar (Glassmorphic)
+            // MARK: - Segmented Tab Bar (Glassmorphic Animated)
             tabBarView
             
-            // MARK: - Tab Content
-            switch state.selectedTab {
-            case .dashboard:
-                dashboardTabView
-            case .deepClean:
-                deepCleanTabView
-            case .processes:
-                processesTabView
+            // MARK: - Tab Content with Transition
+            ZStack {
+                switch state.selectedTab {
+                case .dashboard, .quickTools, .settings:
+                    dashboardTabView
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .scale(scale: 0.98)),
+                            removal: .opacity
+                        ))
+                case .deepClean:
+                    deepCleanTabView
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .scale(scale: 0.98)),
+                            removal: .opacity
+                        ))
+                case .processes:
+                    processesTabView
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .scale(scale: 0.98)),
+                            removal: .opacity
+                        ))
+                }
             }
+            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: state.selectedTab)
+            
+            // MARK: - Open Full App Window Footer
+            Button(action: {
+                state.triggerHaptic()
+                AppDelegate.shared?.closePopover()
+                MainWindowController.shared.showWindow()
+            }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "macwindow")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text(state.strings.openAppWindow)
+                        .font(.system(size: 11, weight: .semibold))
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 9, weight: .bold))
+                }
+                .foregroundColor(.cyan)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(Color.cyan.opacity(0.08), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Color.cyan.opacity(0.25), lineWidth: 0.8))
+            }
+            .buttonStyle(.plain)
+            .hoverLift(elevation: 1, scale: 1.005)
             
             // MARK: - Alert Toast
             if let msg = state.alertMessage {
@@ -33,24 +78,24 @@ public struct CleanBarView: View {
         .frame(width: 350)
         .background(.ultraThinMaterial)
         .alert(
-            "Finalizar Processo?",
+            state.strings.killProcessTitle,
             isPresented: Binding(
                 get: { state.processToKill != nil },
                 set: { if !$0 { state.processToKill = nil } }
             )
         ) {
-            Button("Encerrar Processo", role: .destructive) {
+            Button(state.strings.terminateButton, role: .destructive) {
                 if let proc = state.processToKill {
                     state.terminateProcess(proc)
                     state.processToKill = nil
                 }
             }
-            Button("Cancelar", role: .cancel) {
+            Button(state.strings.cancel, role: .cancel) {
                 state.processToKill = nil
             }
         } message: {
             if let proc = state.processToKill {
-                Text("Deseja encerrar '\(proc.name)' (PID \(proc.pid)) que está usando \(String(format: "%.1f", proc.cpuPercent))% de CPU?")
+                Text(state.strings.killProcessMessage(name: proc.name, pid: proc.pid, cpu: proc.cpuPercent))
             }
         }
     }
@@ -61,21 +106,21 @@ public struct CleanBarView: View {
             HStack(spacing: 8) {
                 ZStack {
                     Circle()
-                        .fill(LinearGradient(colors: [.cyan.opacity(0.8), .purple.opacity(0.8)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .fill(LinearGradient(colors: [.cyan.opacity(0.9), .purple.opacity(0.9)], startPoint: .topLeading, endPoint: .bottomTrailing))
                         .frame(width: 28, height: 28)
-                        .blur(radius: 4)
+                        .blur(radius: 2)
                     
                     Image(systemName: "sparkles")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundColor(.white)
                 }
                 
                 VStack(alignment: .leading, spacing: 1) {
                     Text("CleanBar")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundColor(.primary)
-                    Text("Native macOS Janitor")
-                        .font(.system(size: 10, weight: .medium))
+                    Text("macOS Janitor")
+                        .font(.system(size: 9, weight: .medium))
                         .foregroundColor(.secondary)
                 }
             }
@@ -83,7 +128,41 @@ public struct CleanBarView: View {
             Spacer()
             
             HStack(spacing: 6) {
+                // Language Quick Switcher
                 Button(action: {
+                    state.triggerHaptic()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        state.language = (state.language == .english) ? .portuguese : .english
+                    }
+                }) {
+                    Text(state.language == .english ? "🇺🇸" : "🇧🇷")
+                        .font(.system(size: 11))
+                        .frame(width: 24, height: 24)
+                        .background(.ultraThinMaterial, in: Circle())
+                        .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.8))
+                }
+                .buttonStyle(.plain)
+                .help("Language / Idioma")
+                
+                // Open Standalone Window Button
+                Button(action: {
+                    state.triggerHaptic()
+                    AppDelegate.shared?.closePopover()
+                    MainWindowController.shared.showWindow()
+                }) {
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.cyan)
+                        .frame(width: 24, height: 24)
+                        .background(.ultraThinMaterial, in: Circle())
+                        .overlay(Circle().stroke(Color.cyan.opacity(0.35), lineWidth: 0.8))
+                }
+                .buttonStyle(.plain)
+                .help(state.strings.openAppWindow)
+                
+                // Refresh Button
+                Button(action: {
+                    state.triggerHaptic()
                     state.refreshDisk()
                     state.refreshMemory()
                     if state.selectedTab == .processes {
@@ -94,15 +173,16 @@ public struct CleanBarView: View {
                     }
                 }) {
                     Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 10, weight: .semibold))
                         .foregroundColor(.secondary)
                         .frame(width: 24, height: 24)
                         .background(.ultraThinMaterial, in: Circle())
                         .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.8))
                 }
                 .buttonStyle(.plain)
-                .help("Atualizar dados")
+                .help(state.strings.refresh)
                 
+                // Close Popover
                 Button(action: {
                     AppDelegate.shared?.closePopover()
                 }) {
@@ -114,20 +194,21 @@ public struct CleanBarView: View {
                         .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.8))
                 }
                 .buttonStyle(.plain)
-                .help("Fechar painel (ESC)")
+                .help(state.strings.closePopoverTooltip)
                 
+                // Quit App
                 Button(action: {
                     NSApplication.shared.terminate(nil)
                 }) {
                     Image(systemName: "power")
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.system(size: 9, weight: .semibold))
                         .foregroundColor(.red.opacity(0.8))
                         .frame(width: 24, height: 24)
                         .background(.ultraThinMaterial, in: Circle())
                         .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.8))
                 }
                 .buttonStyle(.plain)
-                .help("Sair do CleanBar")
+                .help(state.strings.quitApp)
             }
         }
         .padding(.horizontal, 2)
@@ -136,9 +217,13 @@ public struct CleanBarView: View {
     // MARK: - Tab Bar
     private var tabBarView: some View {
         HStack(spacing: 4) {
-            ForEach(AppTab.allCases) { tab in
+            ForEach(popoverTabs) { tab in
+                let isSelected = state.selectedTab == tab
                 Button(action: {
-                    state.selectedTab = tab
+                    state.triggerHaptic()
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                        state.selectedTab = tab
+                    }
                     if tab == .deepClean && state.deepCleanCategories.isEmpty {
                         state.scanDeepClean()
                     }
@@ -150,25 +235,29 @@ public struct CleanBarView: View {
                         Image(systemName: tab.icon)
                             .font(.system(size: 10, weight: .semibold))
                         
-                        Text(tab.rawValue)
+                        Text(state.strings.tabTitle(tab))
                             .font(.system(size: 11, weight: .medium))
                         
                         if tab == .processes && state.hasHighCPUProcess {
                             Circle()
                                 .fill(Color.red)
                                 .frame(width: 6, height: 6)
+                                .pulsingGlow()
                         }
                     }
                     .padding(.vertical, 6)
                     .padding(.horizontal, 8)
                     .frame(maxWidth: .infinity)
                     .background(
-                        state.selectedTab == tab
-                            ? Color.primary.opacity(0.12)
-                            : Color.clear,
-                        in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        ZStack {
+                            if isSelected {
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(Color.primary.opacity(0.12))
+                                    .matchedGeometryEffect(id: "popoverTabIndicator", in: popoverTabNamespace)
+                            }
+                        }
                     )
-                    .foregroundColor(state.selectedTab == tab ? .primary : .secondary)
+                    .foregroundColor(isSelected ? .primary : .secondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -187,11 +276,11 @@ public struct CleanBarView: View {
             // Storage Gauge Card
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Label("Macintosh HD", systemImage: "internaldrive.fill")
+                    Label(state.strings.macintoshHD, systemImage: "internaldrive.fill")
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .foregroundColor(.secondary)
                     Spacer()
-                    Text("\(state.diskInfo.percentUsed)% usado")
+                    Text(String(format: state.strings.percentUsed, state.diskInfo.percentUsed))
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .foregroundColor(.secondary)
                 }
@@ -210,6 +299,7 @@ public struct CleanBarView: View {
                             ))
                             .frame(width: max(8, geo.size.width * CGFloat(state.diskInfo.percentUsed) / 100.0), height: 8)
                             .shadow(color: Color.cyan.opacity(0.5), radius: 4, x: 0, y: 0)
+                            .animation(.spring(response: 0.6, dampingFraction: 0.8), value: state.diskInfo.percentUsed)
                     }
                 }
                 .frame(height: 8)
@@ -218,7 +308,7 @@ public struct CleanBarView: View {
                     Text(state.diskInfo.freeFormatted)
                         .font(.system(size: 20, weight: .heavy, design: .rounded))
                         .foregroundColor(.primary)
-                    Text("livres de \(state.diskInfo.totalFormatted)")
+                    Text(String(format: state.strings.freeOfTotal, state.diskInfo.totalFormatted))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
                     Spacer()
@@ -226,15 +316,16 @@ public struct CleanBarView: View {
             }
             .padding(12)
             .glassCard()
+            .hoverLift(elevation: 1.5, scale: 1.005)
             
-            // Memory RAM Card (Kernel mach host_statistics)
+            // Memory RAM Card
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Label("Memória RAM", systemImage: "memorychip.fill")
+                    Label(state.strings.ramMemory, systemImage: "memorychip.fill")
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .foregroundColor(.secondary)
                     Spacer()
-                    Text("\(state.memoryInfo.percentUsed)% em uso")
+                    Text(String(format: state.strings.percentOccupied, state.memoryInfo.percentUsed))
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .foregroundColor(.secondary)
                 }
@@ -253,6 +344,7 @@ public struct CleanBarView: View {
                             ))
                             .frame(width: max(8, geo.size.width * CGFloat(state.memoryInfo.percentUsed) / 100.0), height: 8)
                             .shadow(color: Color.purple.opacity(0.4), radius: 4, x: 0, y: 0)
+                            .animation(.spring(response: 0.6, dampingFraction: 0.8), value: state.memoryInfo.percentUsed)
                     }
                 }
                 .frame(height: 8)
@@ -261,7 +353,7 @@ public struct CleanBarView: View {
                     Text(state.memoryInfo.freeFormatted)
                         .font(.system(size: 18, weight: .heavy, design: .rounded))
                         .foregroundColor(.primary)
-                    Text("livres de \(state.memoryInfo.totalFormatted)")
+                    Text(String(format: state.strings.availableOfTotal, state.memoryInfo.totalFormatted))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
                     Spacer()
@@ -269,23 +361,25 @@ public struct CleanBarView: View {
             }
             .padding(12)
             .glassCard()
+            .hoverLift(elevation: 1.5, scale: 1.005)
             
             // Deep Clean Callout Card
             Button(action: {
+                state.triggerHaptic()
                 state.selectedTab = .deepClean
                 state.scanDeepClean()
             }) {
                 HStack(spacing: 10) {
                     Image(systemName: "wand.and.stars")
-                        .font(.system(size: 18))
+                        .font(.system(size: 16))
                         .foregroundColor(.cyan)
-                        .frame(width: 30)
+                        .frame(width: 28)
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Limpeza Profunda do macOS")
+                        Text(state.strings.tabTitle(.deepClean))
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.primary)
-                        Text("Caches de apps, instaladores esquecidos e logs")
+                        Text(state.language == .english ? "Caches, residual installers and logs" : "Caches, instaladores residuais e logs")
                             .font(.system(size: 9))
                             .foregroundColor(.secondary)
                     }
@@ -300,6 +394,7 @@ public struct CleanBarView: View {
                 .glassCard()
             }
             .buttonStyle(.plain)
+            .hoverLift(elevation: 1.5, scale: 1.005)
             
             // Quick Actions Pills
             HStack(spacing: 8) {
@@ -309,7 +404,7 @@ public struct CleanBarView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "bolt.fill")
                             .foregroundColor(.yellow)
-                        Text("Limpar Caches Rápidos")
+                        Text(state.isCleaning ? state.strings.toolQuickCacheCleaning : state.strings.toolQuickCacheButton)
                             .font(.system(size: 10, weight: .semibold))
                     }
                     .frame(maxWidth: .infinity)
@@ -317,6 +412,7 @@ public struct CleanBarView: View {
                     .glassButton()
                 }
                 .buttonStyle(.plain)
+                .disabled(state.isCleaning)
                 
                 Button(action: {
                     state.emptyTrash()
@@ -324,7 +420,7 @@ public struct CleanBarView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "trash")
                             .foregroundColor(.orange)
-                        Text("Esvaziar Lixeira")
+                        Text(state.strings.toolEmptyTrashButton)
                             .font(.system(size: 10, weight: .semibold))
                     }
                     .frame(maxWidth: .infinity)
@@ -342,7 +438,7 @@ public struct CleanBarView: View {
             // Banner total recuperável
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Espaço Potencial a Liberar")
+                    Text(state.strings.potentialSpaceToReclaim)
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(.secondary)
                     Text(ByteCountFormatter.string(fromByteCount: state.totalRecoverableBytes, countStyle: .file))
@@ -353,7 +449,7 @@ public struct CleanBarView: View {
                 Button(action: {
                     state.scanDeepClean()
                 }) {
-                    Label(state.isScanningCategories ? "Analisando..." : "Reescanear", systemImage: "arrow.triangle.2.circlepath")
+                    Label(state.isScanningCategories ? state.strings.scanning : state.strings.rescan, systemImage: "arrow.triangle.2.circlepath")
                         .font(.system(size: 10, weight: .semibold))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 5)
@@ -366,14 +462,17 @@ public struct CleanBarView: View {
             .glassCard()
             
             // Lista de Categorias
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 ForEach(state.deepCleanCategories) { cat in
                     let isChecked = state.selectedCategories.contains(cat.key)
                     Button(action: {
-                        if isChecked {
-                            state.selectedCategories.remove(cat.key)
-                        } else {
-                            state.selectedCategories.insert(cat.key)
+                        state.triggerHaptic()
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                            if isChecked {
+                                state.selectedCategories.remove(cat.key)
+                            } else {
+                                state.selectedCategories.insert(cat.key)
+                            }
                         }
                     }) {
                         HStack(spacing: 10) {
@@ -382,10 +481,10 @@ public struct CleanBarView: View {
                                 .foregroundColor(isChecked ? .cyan : .secondary)
                             
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(cat.title)
+                                Text(state.strings.categoryTitle(for: cat.key))
                                     .font(.system(size: 11, weight: .semibold))
                                     .foregroundColor(.primary)
-                                Text(cat.subtitle)
+                                Text(state.strings.categorySubtitle(for: cat.key))
                                     .font(.system(size: 9))
                                     .foregroundColor(.secondary)
                                     .lineLimit(1)
@@ -397,30 +496,36 @@ public struct CleanBarView: View {
                                 .font(.system(size: 10, weight: .bold, design: .rounded))
                                 .foregroundColor(.secondary)
                         }
-                        .padding(10)
+                        .padding(8)
                         .background(
                             isChecked ? Color.cyan.opacity(0.08) : Color.primary.opacity(0.03),
-                            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            in: RoundedRectangle(cornerRadius: 8, style: .continuous)
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
                                 .stroke(isChecked ? Color.cyan.opacity(0.3) : Color.white.opacity(0.08), lineWidth: 0.8)
                         )
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(12)
+            .padding(10)
             .glassCard()
             
             // Botão Executar
             if state.isDeepCleaning {
                 VStack(spacing: 6) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 12))
+                            .foregroundColor(.cyan)
+                            .continuousSpin()
+                        Text(state.deepCleanProgressText)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
                     ProgressView()
-                        .scaleEffect(0.8)
-                    Text(state.deepCleanProgressText)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .scaleEffect(0.7)
                 }
                 .padding(.vertical, 8)
             } else {
@@ -429,7 +534,7 @@ public struct CleanBarView: View {
                 }) {
                     HStack {
                         Image(systemName: "sparkles")
-                        Text("Executar Limpeza Profunda")
+                        Text(state.strings.runDeepClean)
                             .font(.system(size: 12, weight: .bold, design: .rounded))
                     }
                     .frame(maxWidth: .infinity)
@@ -442,6 +547,8 @@ public struct CleanBarView: View {
                     .shadow(color: Color.cyan.opacity(0.4), radius: 6, x: 0, y: 2)
                 }
                 .buttonStyle(.plain)
+                .disabled(state.selectedCategories.isEmpty)
+                .opacity(state.selectedCategories.isEmpty ? 0.5 : 1.0)
             }
         }
     }
@@ -455,12 +562,13 @@ public struct CleanBarView: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(.red)
                         .font(.system(size: 16))
+                        .pulsingGlow()
                     
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("Alta Carga de CPU!")
+                        Text(state.strings.highCPULoadAlert)
                             .font(.system(size: 11, weight: .bold))
                             .foregroundColor(.primary)
-                        Text("\(runaway.name) está usando \(String(format: "%.1f", runaway.cpuPercent))% de CPU")
+                        Text(state.strings.highCPUSubtitle(name: runaway.name, percent: runaway.cpuPercent))
                             .font(.system(size: 10))
                             .foregroundColor(.secondary)
                     }
@@ -470,7 +578,7 @@ public struct CleanBarView: View {
                     Button(action: {
                         state.processToKill = runaway
                     }) {
-                        Text("Finalizar")
+                        Text(state.strings.endNow)
                             .font(.system(size: 10, weight: .bold))
                             .foregroundColor(.white)
                             .padding(.horizontal, 10)
@@ -487,7 +595,7 @@ public struct CleanBarView: View {
             // Lista dos Maiores Processos
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Label("Consumo de CPU em Tempo Real", systemImage: "waveform.path.ecg")
+                    Label(state.language == .english ? "Real-time CPU Load" : "Consumo de CPU em Tempo Real", systemImage: "waveform.path.ecg")
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .foregroundColor(.primary)
                     Spacer()
@@ -500,7 +608,7 @@ public struct CleanBarView: View {
                         Button(action: {
                             state.refreshProcesses()
                         }) {
-                            Text("Atualizar")
+                            Text(state.strings.refresh)
                                 .font(.system(size: 9, weight: .semibold))
                                 .foregroundColor(.cyan)
                         }
@@ -509,7 +617,7 @@ public struct CleanBarView: View {
                 }
                 
                 if state.topProcesses.isEmpty {
-                    Text("Nenhum processo pesado no momento.")
+                    Text(state.strings.noProcessesFound)
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                         .padding(.vertical, 6)
@@ -561,7 +669,7 @@ public struct CleanBarView: View {
                                             .foregroundColor(.red.opacity(0.7))
                                     }
                                     .buttonStyle(.plain)
-                                    .help("Finalizar processo")
+                                    .help(state.language == .english ? "Terminate process" : "Finalizar processo")
                                 } else {
                                     Image(systemName: "lock.fill")
                                         .font(.system(size: 9))
