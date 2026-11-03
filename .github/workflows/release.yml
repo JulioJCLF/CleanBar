@@ -1,0 +1,51 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  package-release:
+    name: Build Universal Release Binary
+    runs-on: macos-14
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Compile Apple Silicon (arm64)
+        run: |
+          swift build -c release --triple arm64-apple-macosx
+          mkdir -p /tmp/bin
+          cp .build/out/Products/Release/CleanBar /tmp/bin/CleanBar_arm64
+
+      - name: Compile Intel (x86_64)
+        run: |
+          swift build -c release --triple x86_64-apple-macosx
+          cp .build/out/Products/Release/CleanBar /tmp/bin/CleanBar_x86_64
+
+      - name: Create Universal 2 Binary & Sign Bundle
+        run: |
+          lipo -create -output CleanBar.app/Contents/MacOS/CleanBar /tmp/bin/CleanBar_arm64 /tmp/bin/CleanBar_x86_64
+          chmod +x CleanBar.app/Contents/MacOS/CleanBar
+          codesign --force --deep -s - CleanBar.app
+          mkdir -p dist
+          ZIP_NAME="CleanBar-${{ github.ref_name }}-macOS-Universal.zip"
+          zip -r -y "dist/${ZIP_NAME}" CleanBar.app
+          cd dist
+          shasum -a 256 "${ZIP_NAME}" > "${ZIP_NAME}.sha256"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.zip
+            dist/*.sha256
+          generate_release_notes: true
+          draft: false
+          prerelease: false

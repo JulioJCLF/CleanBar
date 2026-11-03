@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    name: Build & Test (macOS)
+    runs-on: macos-14
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Show Swift & macOS Version
+        run: |
+          swift --version
+          uname -a
+
+      - name: Build Debug
+        run: swift build -v
+
+      - name: Run Core Verification Suite
+        run: swift scripts/verify_system.swift
+
+      - name: Build Release (Apple Silicon arm64)
+        run: swift build -c release --triple arm64-apple-macosx
+
+      - name: Build Release (Intel x86_64)
+        run: swift build -c release --triple x86_64-apple-macosx

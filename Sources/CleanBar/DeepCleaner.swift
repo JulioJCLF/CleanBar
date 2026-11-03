@@ -267,8 +267,13 @@ public final class DeepCleaner: @unchecked Sendable {
         for file in files {
             let ext = (file as NSString).pathExtension.lowercased()
             if targetExtensions.contains(ext) {
-                let filePath = (downloadsPath as NSString).appendingPathComponent(file)
-                try? fm.removeItem(atPath: filePath)
+                let fileURL = URL(fileURLWithPath: (downloadsPath as NSString).appendingPathComponent(file))
+                // Safe macOS deletion: move to Trash first so user can 'Put Back' if needed
+                do {
+                    try fm.trashItem(at: fileURL, resultingItemURL: nil)
+                } catch {
+                    try? fm.removeItem(at: fileURL)
+                }
             }
         }
     }

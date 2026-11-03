@@ -43,7 +43,7 @@ O **CleanBar** é desenvolvido 100% em **Swift 6.4 + SwiftUI + AppKit**:
 - **Totalmente Bilíngue**: Suporte nativo para Português 🇧🇷 e Inglês 🇺🇸 com alternância instantânea nas Configurações ou cabeçalho.
 - **Animações Fluidas**: Física elástica em 60/120Hz (ProMotion), anéis medidores animados e feedback tátil háptico (`NSHapticFeedbackManager`).
 - **Tamanho Mínimo**: Binário Universal 2 com menos de **4.8 MB** (compatível nativamente com Apple Silicon M1/M2/M3/M4 e Macs Intel).
-- **Consumo Zero em Repouso**: **0.0% de CPU** em repouso e **menos de 40 MB de memória RAM**.
+- **Consumo Zero em Repouso**: **0.0% de CPU** em repouso e **menos de 35 MB de memória RAM** (~32 MB residentes).
 - **Design Autêntico macOS**: Vidro fosco translúcido (*Glassmorphism*) com materiais nativos da Apple (`.ultraThinMaterial`).
 - **100% Privado e Offline**: Sem rastreadores, sem telemetria, sem contas e sem necessidade de conexão com a internet.
 
@@ -98,7 +98,7 @@ O **CleanBar** é desenvolvido 100% em **Swift 6.4 + SwiftUI + AppKit**:
 | **Engine** | **Swift 6.4 + SwiftUI Nativo** | Objective-C / Swift | Electron / Tecnologias Web |
 | **Bilíngue** | **Inglês e Português** | Multilíngue | Varia |
 | **Tamanho do App** | **< 4.8 MB (Universal)** | ~150 MB | 120–250 MB |
-| **RAM em Repouso** | **< 40 MB** | 120–200 MB | 300–600 MB |
+| **RAM em Repouso** | **< 35 MB** | 120–200 MB | 300–600 MB |
 | **CPU em Repouso** | **0.0%** | Daemon em segundo plano | 1.0–4.0% |
 | **Preço** | **100% Grátis e Código Aberto** | R$ 180+ / ano | Assinatura / Freemium |
 | **Design** | **Janela Desktop + Barra de Menus** | Janela Customizada | HTML/CSS Web |

@@ -47,7 +47,7 @@ Most utilities designed to solve this are either **heavy Electron applications**
 - **Bilingual Interface**: Native support for English 🇺🇸 and Portuguese 🇧🇷 with instant 1-click switching.
 - **Butter-Smooth Animations**: Fluid 60/120Hz ProMotion spring animations, animated circular gauge rings, and continuous status feedback.
 - **Tiny footprint**: Less than **4.8 MB** Universal 2 binary (Apple Silicon M1/M2/M3/M4 + Intel x86_64).
-- **Zero background overhead**: **0.0% CPU** at idle and **< 40 MB of RAM**.
+- **Zero background overhead**: **0.0% CPU** at idle and **< 35 MB of RAM** (~32 MB resident).
 - **Authentic macOS Design**: Apple-grade Frosted Glass (`.ultraThinMaterial`) matching macOS Sequoia / Sonoma aesthetics.
 - **100% Private & Offline**: Zero analytics, zero tracking, zero internet calls.
 
@@ -102,7 +102,7 @@ Most utilities designed to solve this are either **heavy Electron applications**
 | **Engine** | **Native Swift 6.4 + SwiftUI** | Objective-C / Swift | Electron / Web Technologies |
 | **Bilingual** | **English & Portuguese** | Multilingual | Varies |
 | **App Size** | **< 4.8 MB (Universal)** | ~150 MB | 120–250 MB |
-| **Idle Memory (RAM)** | **< 40 MB** | 120–200 MB | 300–600 MB |
+| **Idle Memory (RAM)** | **< 35 MB** | 120–200 MB | 300–600 MB |
 | **Idle CPU Usage** | **0.0%** | Background Daemon | 1.0–4.0% |
 | **Price** | **100% Free & Open Source** | $39.95 / year | Subscription / Freemium |
 | **Design** | **Desktop Window + Menu Bar Hub** | Custom Window | Web HTML/CSS |
@@ -169,7 +169,7 @@ O **CleanBar** é desenvolvido 100% em **Swift 6.4 + SwiftUI + AppKit**:
 - **Totalmente Bilíngue**: Suporte nativo para Português 🇧🇷 e Inglês 🇺🇸 com alternância instantânea nas Configurações ou cabeçalho.
 - **Animações Fluidas**: Física elástica em 60/120Hz (ProMotion), anéis medidores animados e feedback tátil háptico (`NSHapticFeedbackManager`).
 - **Tamanho Mínimo**: Binário Universal 2 com menos de **4.8 MB** (compatível nativamente com Apple Silicon M1/M2/M3/M4 e Macs Intel).
-- **Consumo Zero em Repouso**: **0.0% de CPU** em repouso e **menos de 40 MB de memória RAM**.
+- **Consumo Zero em Repouso**: **0.0% de CPU** em repouso e **menos de 35 MB de memória RAM** (~32 MB residentes).
 - **Design Autêntico macOS**: Vidro fosco translúcido (*Glassmorphism*) com materiais nativos da Apple (`.ultraThinMaterial`).
 - **100% Privado e Offline**: Sem rastreadores, sem telemetria, sem contas e sem necessidade de conexão com a internet.
 

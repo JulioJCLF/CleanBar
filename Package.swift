@@ -13,6 +13,11 @@ let package = Package(
         .executableTarget(
             name: "CleanBar",
             path: "Sources/CleanBar"
+        ),
+        .testTarget(
+            name: "CleanBarTests",
+            dependencies: ["CleanBar"],
+            path: "Tests/CleanBarTests"
         )
     ]
 )

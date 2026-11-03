@@ -92,6 +92,9 @@ public final class ProcessMonitor: @unchecked Sendable {
     }
     
     public func terminateProcess(pid: Int) -> Bool {
+        // Strict security guardrails: prevent killing PID <= 1 (launchd/kernel) or CleanBar itself
+        guard pid > 1, pid != Int(getpid()) else { return false }
+        
         // Direct Darwin POSIX syscall: 0 subprocesses, 0 pipes, 0 allocations (< 1µs)
         let targetPid = pid_t(pid)
         if Darwin.kill(targetPid, SIGTERM) == 0 {
