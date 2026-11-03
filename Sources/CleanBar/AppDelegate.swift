@@ -129,6 +129,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelega
     
     public func popoverDidClose(_ notification: Notification) {
         removeEventMonitors()
+        AppState.shared.purgeTransientMemory()
     }
     
     // MARK: - Event Monitors (Click Outside & ESC)

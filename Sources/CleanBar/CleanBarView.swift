@@ -441,7 +441,7 @@ public struct CleanBarView: View {
                     Text(state.strings.potentialSpaceToReclaim)
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(.secondary)
-                    Text(ByteCountFormatter.string(fromByteCount: state.totalRecoverableBytes, countStyle: .file))
+                    Text(Formatters.fileString(from: state.totalRecoverableBytes))
                         .font(.system(size: 18, weight: .heavy, design: .rounded))
                         .foregroundColor(.cyan)
                 }

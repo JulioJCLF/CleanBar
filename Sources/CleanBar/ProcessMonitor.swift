@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import Darwin
 
 public struct ProcessInfoItem: Identifiable, Sendable {
     public var id: Int { pid }
@@ -46,27 +47,26 @@ public final class ProcessMonitor: @unchecked Sendable {
                 }
             }
             
-            // CRUCIAL: Always read from pipe BEFORE waiting to exit.
-            // In macOS, pipes have a 64KB buffer. If ps produces >64KB and we call waitUntilExit() first,
-            // the process blocks forever waiting for the pipe to be drained, causing a permanent deadlock!
+            // Read from pipe before waiting to prevent 64KB pipe buffer deadlocks
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
             task.waitUntilExit()
             
             guard let str = String(data: data, encoding: .utf8) else { return [] }
             
             var items: [ProcessInfoItem] = []
-            let lines = str.components(separatedBy: "\n").dropFirst() // drop header
+            items.reserveCapacity(limit)
             
-            for line in lines {
-                let parts = line.trimmingCharacters(in: .whitespaces)
-                    .components(separatedBy: .whitespaces)
-                    .filter { !$0.isEmpty }
+            // Parse line-by-line in-place without allocating large arrays
+            str.enumerateLines { line, stop in
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                if trimmed.isEmpty || trimmed.hasPrefix("PID") { return }
                 
+                let parts = trimmed.split(separator: " ", omittingEmptySubsequences: true)
                 guard parts.count >= 4,
                       let pid = Int(parts[0]),
                       let cpu = Double(parts[1].replacingOccurrences(of: ",", with: ".")),
                       let mem = Double(parts[2].replacingOccurrences(of: ",", with: ".")) else {
-                    continue
+                    return
                 }
                 
                 let commandPath = parts[3...].joined(separator: " ")
@@ -80,7 +80,9 @@ public final class ProcessMonitor: @unchecked Sendable {
                     fullCommand: commandPath
                 ))
                 
-                if items.count >= limit { break }
+                if items.count >= limit {
+                    stop = true
+                }
             }
             
             return items
@@ -90,22 +92,12 @@ public final class ProcessMonitor: @unchecked Sendable {
     }
     
     public func terminateProcess(pid: Int) -> Bool {
-        let task = Process()
-        task.launchPath = "/bin/kill"
-        task.arguments = ["-15", "\(pid)"] // Graceful SIGTERM
-        try? task.run()
-        task.waitUntilExit()
-        
-        if task.terminationStatus == 0 {
+        // Direct Darwin POSIX syscall: 0 subprocesses, 0 pipes, 0 allocations (< 1µs)
+        let targetPid = pid_t(pid)
+        if Darwin.kill(targetPid, SIGTERM) == 0 {
             return true
         }
-        
-        // If SIGTERM fails, force with SIGKILL
-        let forceTask = Process()
-        forceTask.launchPath = "/bin/kill"
-        forceTask.arguments = ["-9", "\(pid)"]
-        try? forceTask.run()
-        forceTask.waitUntilExit()
-        return forceTask.terminationStatus == 0
+        // Force kill with SIGKILL if SIGTERM did not succeed
+        return Darwin.kill(targetPid, SIGKILL) == 0
     }
 }

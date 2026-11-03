@@ -182,7 +182,7 @@ public struct CleanBarMainWindowView: View {
                                     .pulsingGlow(color: .red)
                             }
                             if tab == .deepClean && state.totalRecoverableBytes > 0 {
-                                Text(ByteCountFormatter.string(fromByteCount: state.totalRecoverableBytes, countStyle: .file))
+                                Text(Formatters.fileString(from: state.totalRecoverableBytes))
                                     .font(.system(size: 10, weight: .bold, design: .rounded))
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
@@ -566,7 +566,7 @@ public struct CleanBarMainWindowView: View {
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(.secondary)
                     
-                    Text(ByteCountFormatter.string(fromByteCount: state.totalRecoverableBytes, countStyle: .file))
+                    Text(Formatters.fileString(from: state.totalRecoverableBytes))
                         .font(.system(size: 32, weight: .heavy, design: .rounded))
                         .foregroundColor(.cyan)
                     

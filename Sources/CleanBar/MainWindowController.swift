@@ -78,5 +78,14 @@ public final class MainWindowController: NSObject, NSWindowDelegate {
         if !AppState.shared.keepInDock {
             NSApp.setActivationPolicy(.accessory)
         }
+        AppState.shared.purgeTransientMemory()
+    }
+    
+    public func windowDidChangeOcclusionState(_ notification: Notification) {
+        guard let win = window else { return }
+        // If the window is completely occluded or minimized, drop transient allocations
+        if !win.occlusionState.contains(.visible) {
+            AppState.shared.purgeTransientMemory()
+        }
     }
 }

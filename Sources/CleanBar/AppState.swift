@@ -246,7 +246,7 @@ public final class AppState: ObservableObject {
                 self.refreshMemory()
                 self.scanDeepClean()
                 self.triggerHaptic()
-                let freedStr = ByteCountFormatter.string(fromByteCount: freedBytes, countStyle: .file)
+                let freedStr = Formatters.fileString(from: freedBytes)
                 self.alertMessage = self.language == .english
                     ? "Clean complete! \(freedStr) reclaimed successfully."
                     : "Limpeza concluída! \(freedStr) recuperados com sucesso."
@@ -348,5 +348,16 @@ public final class AppState: ObservableObject {
     public func openMainWindow() {
         triggerHaptic()
         AppDelegate.shared?.showMainWindow()
+    }
+    
+    // MARK: - Memory Pressure Management
+    
+    public func purgeTransientMemory() {
+        self.processSearchQuery = ""
+        if self.topProcesses.count > 10 {
+            self.topProcesses = Array(self.topProcesses.prefix(10))
+        }
+        // Tell Darwin libsystem malloc to return unused pages back to the kernel
+        Darwin.malloc_zone_pressure_relief(nil, 0)
     }
 }

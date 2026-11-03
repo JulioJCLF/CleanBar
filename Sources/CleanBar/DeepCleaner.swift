@@ -10,7 +10,7 @@ public struct CleanCategoryItem: Identifiable, Sendable {
     public let estimatedSizeBytes: Int64
     
     public var sizeFormatted: String {
-        ByteCountFormatter.string(fromByteCount: estimatedSizeBytes, countStyle: .file)
+        Formatters.fileString(from: estimatedSizeBytes)
     }
 }
 
@@ -90,7 +90,7 @@ public final class DeepCleaner: @unchecked Sendable {
                 let after = self.calculateAppCacheSize()
                 let freed = max(0, before - after)
                 freedBytes += freed
-                summary += "Caches de Apps: \(ByteCountFormatter.string(fromByteCount: freed, countStyle: .file))\n"
+                summary += "Caches de Apps: \(Formatters.fileString(from: freed))\n"
             }
             
             // 2. Installers
@@ -101,7 +101,7 @@ public final class DeepCleaner: @unchecked Sendable {
                 let after = self.calculateInstallersSize()
                 let freed = max(0, before - after)
                 freedBytes += freed
-                summary += "Instaladores: \(ByteCountFormatter.string(fromByteCount: freed, countStyle: .file))\n"
+                summary += "Instaladores: \(Formatters.fileString(from: freed))\n"
             }
             
             // 3. System Logs
@@ -112,7 +112,7 @@ public final class DeepCleaner: @unchecked Sendable {
                 let after = self.calculateLogsSize()
                 let freed = max(0, before - after)
                 freedBytes += freed
-                summary += "Logs: \(ByteCountFormatter.string(fromByteCount: freed, countStyle: .file))\n"
+                summary += "Logs: \(Formatters.fileString(from: freed))\n"
             }
             
             // 4. Trash & Temp
@@ -123,7 +123,7 @@ public final class DeepCleaner: @unchecked Sendable {
                 let after = self.calculateTrashSize()
                 let freed = max(0, before - after)
                 freedBytes += freed
-                summary += "Lixeira & Temp: \(ByteCountFormatter.string(fromByteCount: freed, countStyle: .file))\n"
+                summary += "Lixeira & Temp: \(Formatters.fileString(from: freed))\n"
             }
             
             // 5. Developer Caches
@@ -134,7 +134,7 @@ public final class DeepCleaner: @unchecked Sendable {
                 let after = self.calculateDeveloperCacheSize()
                 let freed = max(0, before - after)
                 freedBytes += freed
-                summary += "Caches de Dev: \(ByteCountFormatter.string(fromByteCount: freed, countStyle: .file))\n"
+                summary += "Caches de Dev: \(Formatters.fileString(from: freed))\n"
             }
             
             DispatchQueue.main.async {
@@ -194,13 +194,18 @@ public final class DeepCleaner: @unchecked Sendable {
     private func calculateTrashSize() -> Int64 {
         let script = """
         tell application "Finder"
-            set totalBytes to 0
-            repeat with anItem in (get items of trash)
-                try
-                    set totalBytes to totalBytes + (size of anItem)
-                end try
-            end repeat
-            return totalBytes
+            set trashCount to count every item of trash
+            if trashCount is 0 then return 0
+            try
+                set sList to size of every item of trash
+                set totalBytes to 0
+                repeat with s in sList
+                    if s is not missing value then set totalBytes to totalBytes + s
+                end repeat
+                return totalBytes
+            on error
+                return 0
+            end try
         end tell
         """
         let task = Process()
@@ -306,7 +311,7 @@ public final class DeepCleaner: @unchecked Sendable {
         }
     }
     
-    // Fast, non-blocking native directory size calculation (Zero child processes, zero pipe deadlock)
+    // Fast, non-blocking native directory size calculation with autoreleasepool (Zero heap bloat)
     private func fastDirectorySize(_ path: String, maxDepth: Int = 2) -> Int64 {
         let url = URL(fileURLWithPath: path)
         let fm = FileManager.default
@@ -318,20 +323,22 @@ public final class DeepCleaner: @unchecked Sendable {
         }
         
         var total: Int64 = 0
-        if let enumerator = fm.enumerator(
-            at: url,
-            includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey],
-            options: [.skipsPackageDescendants]
-        ) {
-            for case let fileURL as URL in enumerator {
-                if enumerator.level > maxDepth {
-                    enumerator.skipDescendants()
-                    continue
-                }
-                if let values = try? fileURL.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey]),
-                   values.isRegularFile == true,
-                   let size = values.fileSize {
-                    total += Int64(size)
+        autoreleasepool {
+            if let enumerator = fm.enumerator(
+                at: url,
+                includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey],
+                options: [.skipsPackageDescendants, .skipsHiddenFiles]
+            ) {
+                while let fileURL = enumerator.nextObject() as? URL {
+                    if enumerator.level > maxDepth {
+                        enumerator.skipDescendants()
+                        continue
+                    }
+                    if let values = try? fileURL.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey]),
+                       values.isRegularFile == true,
+                       let size = values.fileSize {
+                        total += Int64(size)
+                    }
                 }
             }
         }

@@ -8,15 +8,15 @@ public struct DiskSpaceInfo: Sendable {
     public let usedBytes: Int64
     
     public var freeFormatted: String {
-        ByteCountFormatter.string(fromByteCount: freeBytes, countStyle: .file)
+        Formatters.fileString(from: freeBytes)
     }
     
     public var totalFormatted: String {
-        ByteCountFormatter.string(fromByteCount: totalBytes, countStyle: .file)
+        Formatters.fileString(from: totalBytes)
     }
     
     public var usedFormatted: String {
-        ByteCountFormatter.string(fromByteCount: usedBytes, countStyle: .file)
+        Formatters.fileString(from: usedBytes)
     }
     
     public var percentUsed: Int {
@@ -43,22 +43,22 @@ public struct MemoryInfo: Sendable {
     }
     
     public var usedFormatted: String {
-        ByteCountFormatter.string(fromByteCount: Int64(usedBytes), countStyle: .memory)
+        Formatters.memoryString(from: usedBytes)
     }
     public var freeFormatted: String {
-        ByteCountFormatter.string(fromByteCount: Int64(freeBytes), countStyle: .memory)
+        Formatters.memoryString(from: freeBytes)
     }
     public var totalFormatted: String {
-        ByteCountFormatter.string(fromByteCount: Int64(totalBytes), countStyle: .memory)
+        Formatters.memoryString(from: totalBytes)
     }
     public var activeFormatted: String {
-        ByteCountFormatter.string(fromByteCount: Int64(activeBytes), countStyle: .memory)
+        Formatters.memoryString(from: activeBytes)
     }
     public var wiredFormatted: String {
-        ByteCountFormatter.string(fromByteCount: Int64(wiredBytes), countStyle: .memory)
+        Formatters.memoryString(from: wiredBytes)
     }
     public var compressedFormatted: String {
-        ByteCountFormatter.string(fromByteCount: Int64(compressedBytes), countStyle: .memory)
+        Formatters.memoryString(from: compressedBytes)
     }
     public var percentUsed: Int {
         guard totalBytes > 0 else { return 0 }
