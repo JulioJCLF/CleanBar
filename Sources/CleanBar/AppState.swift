@@ -53,7 +53,7 @@ public final class AppState: ObservableObject {
     
     // Deep Clean (Computed strictly on-demand)
     @Published public var deepCleanCategories: [CleanCategoryItem] = []
-    @Published public var selectedCategories: Set<String> = ["app_caches", "installers", "system_logs", "trash_temp", "developer_caches"]
+    @Published public var selectedCategories: Set<String> = ["app_caches", "installers", "system_logs", "trash_temp", "developer_caches", "project_builds"]
     @Published public var isDeepCleaning = false
     @Published public var isScanningCategories = false
     @Published public var deepCleanProgressText = ""
@@ -261,6 +261,7 @@ public final class AppState: ObservableObject {
             if step.contains("logs") { return "Cleaning diagnostic logs and reports..." }
             if step.contains("lixeira") { return "Emptying trash and temporary files..." }
             if step.contains("Xcode") { return "Cleaning Xcode build artifacts..." }
+            if step.contains("projetos") || step.contains("Builds") { return "Cleaning project caches and build artifacts..." }
         }
         return step
     }

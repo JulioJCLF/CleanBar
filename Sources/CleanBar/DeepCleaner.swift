@@ -74,6 +74,18 @@ public final class DeepCleaner: @unchecked Sendable {
             ))
         }
         
+        // 6. Project Builds & Framework Caches (.next, dist, pycache, .build)
+        let projectSize = calculateProjectBuildsSize()
+        if projectSize > 0 {
+            categories.append(CleanCategoryItem(
+                key: "project_builds",
+                title: "Builds e Caches de Projetos",
+                icon: "folder.badge.gearshape",
+                subtitle: "Next.js (.next), saídas de compilação (dist), Swift (.build) e __pycache__",
+                estimatedSizeBytes: projectSize
+            ))
+        }
+        
         return categories
     }
     
@@ -135,6 +147,17 @@ public final class DeepCleaner: @unchecked Sendable {
                 let freed = max(0, before - after)
                 freedBytes += freed
                 summary += "Caches de Dev: \(Formatters.fileString(from: freed))\n"
+            }
+            
+            // 6. Project Builds & Framework Caches
+            if categories.contains("project_builds") {
+                progress("Limpando caches e builds de projetos...")
+                let before = self.calculateProjectBuildsSize()
+                self.cleanProjectBuilds()
+                let after = self.calculateProjectBuildsSize()
+                let freed = max(0, before - after)
+                freedBytes += freed
+                summary += "Builds de Projetos: \(Formatters.fileString(from: freed))\n"
             }
             
             DispatchQueue.main.async {
@@ -312,6 +335,88 @@ public final class DeepCleaner: @unchecked Sendable {
             for item in items {
                 let itemPath = (derivedData as NSString).appendingPathComponent(item)
                 try? fm.removeItem(atPath: itemPath)
+            }
+        }
+    }
+    
+    // MARK: - Project Builds (.next, dist, pycache, .build)
+    
+    private var candidateProjectRoots: [String] {
+        let home = NSHomeDirectory()
+        return [
+            (home as NSString).appendingPathComponent("Documents/Projects"),
+            (home as NSString).appendingPathComponent("Documents/projects"),
+            (home as NSString).appendingPathComponent("Projects"),
+            (home as NSString).appendingPathComponent("Developer")
+        ]
+    }
+    
+    private func calculateProjectBuildsSize() -> Int64 {
+        let fm = FileManager.default
+        var total: Int64 = 0
+        let targetFolders: Set<String> = [".next", ".build", "dist", ".turbo", "__pycache__"]
+        
+        for root in candidateProjectRoots {
+            guard let projects = try? fm.contentsOfDirectory(atPath: root) else { continue }
+            for proj in projects {
+                if proj.hasPrefix(".") { continue }
+                let projPath = (root as NSString).appendingPathComponent(proj)
+                
+                // Inspect root of project and 1-subfolder deep (e.g. frontend/.next, backend/dist)
+                if let subItems = try? fm.contentsOfDirectory(atPath: projPath) {
+                    for item in subItems {
+                        let itemPath = (projPath as NSString).appendingPathComponent(item)
+                        if targetFolders.contains(item) {
+                            total += fastDirectorySize(itemPath, maxDepth: 4)
+                        } else {
+                            // Check 1 subfolder (e.g. frontend, backend)
+                            var isDir: ObjCBool = false
+                            if fm.fileExists(atPath: itemPath, isDirectory: &isDir), isDir.boolValue, !item.hasPrefix(".") && item != "node_modules" {
+                                if let inner = try? fm.contentsOfDirectory(atPath: itemPath) {
+                                    for sub in inner where targetFolders.contains(sub) {
+                                        let targetPath = (itemPath as NSString).appendingPathComponent(sub)
+                                        total += fastDirectorySize(targetPath, maxDepth: 4)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return total
+    }
+    
+    private func cleanProjectBuilds() {
+        let fm = FileManager.default
+        let targetFolders: Set<String> = [".next", ".build", "dist", ".turbo", "__pycache__"]
+        
+        for root in candidateProjectRoots {
+            guard let projects = try? fm.contentsOfDirectory(atPath: root) else { continue }
+            for proj in projects {
+                if proj.hasPrefix(".") { continue }
+                let projPath = (root as NSString).appendingPathComponent(proj)
+                
+                if let subItems = try? fm.contentsOfDirectory(atPath: projPath) {
+                    for item in subItems {
+                        let itemPath = (projPath as NSString).appendingPathComponent(item)
+                        if targetFolders.contains(item) {
+                            // Safe removal: if CleanBar itself, keep current active app
+                            if proj == "CleanBar" && item == "dist" { continue }
+                            try? fm.removeItem(atPath: itemPath)
+                        } else {
+                            var isDir: ObjCBool = false
+                            if fm.fileExists(atPath: itemPath, isDirectory: &isDir), isDir.boolValue, !item.hasPrefix(".") && item != "node_modules" {
+                                if let inner = try? fm.contentsOfDirectory(atPath: itemPath) {
+                                    for sub in inner where targetFolders.contains(sub) {
+                                        let targetPath = (itemPath as NSString).appendingPathComponent(sub)
+                                        try? fm.removeItem(atPath: targetPath)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

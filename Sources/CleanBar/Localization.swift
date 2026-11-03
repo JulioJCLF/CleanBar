@@ -123,6 +123,7 @@ public struct Strings {
         case "system_logs": return lang == .english ? "System Logs & Reports" : "Logs e Relatórios do Sistema"
         case "trash_temp": return lang == .english ? "Trash & Temporary Files" : "Lixeira & Arquivos Temporários"
         case "developer_caches": return lang == .english ? "Developer Caches (Xcode)" : "Caches de Desenvolvimento (Xcode)"
+        case "project_builds": return lang == .english ? "Project Builds & Caches (.next, dist, pycache)" : "Builds e Caches de Projetos (.next, dist, pycache)"
         default: return key
         }
     }
@@ -149,6 +150,10 @@ public struct Strings {
             return lang == .english
                 ? "Xcode DerivedData and build artifacts"
                 : "DerivedData do Xcode e artefatos de compilação"
+        case "project_builds":
+            return lang == .english
+                ? "Next.js (.next), build bundles (dist), Swift (.build) and __pycache__"
+                : "Next.js (.next), saídas de compilação (dist), Swift (.build) e __pycache__"
         default: return ""
         }
     }
