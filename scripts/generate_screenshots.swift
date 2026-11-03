@@ -25,6 +25,25 @@ struct DesktopWindowContainer: View {
     }
 }
 
+struct PopoverContainer: View {
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [Color(red: 0.07, green: 0.09, blue: 0.14), Color(red: 0.11, green: 0.07, blue: 0.16)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .frame(width: 440, height: 600)
+            
+            CleanBarView()
+                .frame(width: 350)
+                .padding(30)
+                .shadow(color: Color.black.opacity(0.4), radius: 20, x: 0, y: 10)
+        }
+        .frame(width: 440, height: 600)
+    }
+}
+
 @main
 struct ScreenshotGenerator {
     @MainActor
@@ -65,7 +84,23 @@ struct ScreenshotGenerator {
             savePNG(image: img3, path: "\(basePath)/cleanbar-processes.png")
         }
         
-        print("Done rendering all desktop window screenshots!")
+        // 4. Settings & Permissions Tab
+        AppState.shared.selectedTab = .settings
+        let renderer4 = ImageRenderer(content: container)
+        renderer4.scale = 2.0
+        if let img4 = renderer4.nsImage {
+            savePNG(image: img4, path: "\(basePath)/cleanbar-settings.png")
+        }
+        
+        // 5. Menu Bar Popover
+        AppState.shared.selectedTab = .dashboard
+        let popoverRenderer = ImageRenderer(content: PopoverContainer())
+        popoverRenderer.scale = 2.0
+        if let popoverImg = popoverRenderer.nsImage {
+            savePNG(image: popoverImg, path: "\(basePath)/cleanbar-menubar.png")
+        }
+        
+        print("Done rendering all 5 screenshots (Dashboard, Deep Clean, Processes, Settings, Menubar)!")
     }
     
     @MainActor
