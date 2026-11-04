@@ -595,6 +595,92 @@ public struct CleanBarMainWindowView: View {
                 )
             }
             
+            // Developer PNPM Deduplication Insight Banner
+            if let insight = state.devInsight, insight.hasInsight {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "lightbulb.max.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(.yellow)
+                        .padding(.top, 2)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            Text(state.strings.devInsightTitle)
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(.primary)
+                            
+                            if insight.isPnpmInstalled {
+                                Text(state.strings.devInsightPnpmInstalled)
+                                    .font(.system(size: 9, weight: .bold))
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.green.opacity(0.15), in: Capsule())
+                                    .foregroundColor(.green)
+                            }
+                        }
+                        
+                        Text(state.strings.devInsightBody(
+                            npmCount: insight.npmOrYarnProjectCount,
+                            wastedFormatted: Formatters.fileString(from: insight.estimatedWastedBytes)
+                        ))
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    }
+                    
+                    Spacer()
+                    
+                    VStack(alignment: .trailing, spacing: 6) {
+                        if insight.isPnpmInstalled && insight.pnpmStoreBytes > 0 {
+                            Button(action: {
+                                state.prunePnpmStore()
+                            }) {
+                                HStack(spacing: 4) {
+                                    if state.isPruningPnpm {
+                                        ProgressView()
+                                            .scaleEffect(0.5)
+                                            .frame(width: 12, height: 12)
+                                        Text(state.strings.pruningPnpm)
+                                            .font(.system(size: 10, weight: .semibold))
+                                    } else {
+                                        Image(systemName: "scissors")
+                                            .font(.system(size: 10))
+                                        Text(state.strings.prunePnpmButton)
+                                            .font(.system(size: 10, weight: .semibold))
+                                    }
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .polishedGlassButton(isHighlighted: true)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(state.isPruningPnpm)
+                        }
+                        
+                        Button(action: {
+                            if let url = URL(string: "https://pnpm.io/motivation") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        }) {
+                            HStack(spacing: 3) {
+                                Text(state.strings.learnMorePnpm)
+                                    .font(.system(size: 10, weight: .medium))
+                                Image(systemName: "arrow.up.forward.app")
+                                    .font(.system(size: 9))
+                            }
+                            .foregroundColor(.cyan)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(12)
+                .background(Color.yellow.opacity(0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.yellow.opacity(0.25), lineWidth: 0.8)
+                )
+            }
+            
             // Reclaimable Hero Banner
             HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {

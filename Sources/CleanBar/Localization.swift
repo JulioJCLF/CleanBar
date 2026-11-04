@@ -275,4 +275,28 @@ public struct Strings {
             ? "Enable 'Full Disk Access' once in System Settings so macOS never prompts for folder permissions again."
             : "Ative o 'Acesso Total ao Disco' uma vez nos Ajustes do Sistema para que o macOS nunca mais peça permissão de pastas."
     }
+    
+    // MARK: - Dev Insights & PNPM Hard-link Dedup
+    public var devInsightTitle: String {
+        lang == .english ? "💡 Developer Storage Optimization" : "💡 Otimização de Armazenamento para Devs"
+    }
+    public func devInsightBody(npmCount: Int, wastedFormatted: String) -> String {
+        if lang == .english {
+            return "Detected \(npmCount) project(s) duplicating ~\(wastedFormatted) in node_modules. Using **pnpm** shares packages globally via hard links, saving gigabytes across projects."
+        } else {
+            return "Detectamos \(npmCount) projeto(s) duplicando ~\(wastedFormatted) em node_modules. Migrar para o **pnpm** compartilha pacotes globalmente via links físicos (hard links), economizando gigabytes."
+        }
+    }
+    public var devInsightPnpmInstalled: String {
+        lang == .english ? "pnpm is ready on your Mac." : "pnpm instalado e pronto no seu Mac."
+    }
+    public var prunePnpmButton: String {
+        lang == .english ? "Prune Unused Packages" : "Podar Pacotes Órfãos"
+    }
+    public var pruningPnpm: String {
+        lang == .english ? "Pruning pnpm store..." : "Podando store do pnpm..."
+    }
+    public var learnMorePnpm: String {
+        lang == .english ? "Learn More" : "Saiba Mais"
+    }
 }

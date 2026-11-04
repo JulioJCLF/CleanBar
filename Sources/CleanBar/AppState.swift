@@ -59,6 +59,10 @@ public final class AppState: ObservableObject {
     @Published public var deepCleanProgressText = ""
     @Published public var totalRecoverableBytes: Int64 = 0
     
+    // Dev Insights (PNPM / Deduplication)
+    @Published public var devInsight: DevDeduplicationInsight?
+    @Published public var isPruningPnpm = false
+    
     // Process Monitor (Refreshed strictly on demand when user opens tab or clicks refresh)
     @Published public var topProcesses: [ProcessInfoItem] = []
     @Published public var hasHighCPUProcess = false
@@ -216,12 +220,40 @@ public final class AppState: ObservableObject {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let cats = DeepCleaner.shared.scanCategories()
             let total = cats.reduce(0) { $0 + $1.estimatedSizeBytes }
+            let insight = DevEnvironmentDetector.shared.detectInsights()
             
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
                 self.deepCleanCategories = cats
                 self.totalRecoverableBytes = total
+                self.devInsight = insight
                 self.isScanningCategories = false
+            }
+        }
+    }
+    
+    public func prunePnpmStore() {
+        guard !isPruningPnpm else { return }
+        isPruningPnpm = true
+        triggerHaptic()
+        
+        DevEnvironmentDetector.shared.prunePnpmStore { [weak self] success, output in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                self.isPruningPnpm = false
+                self.triggerHaptic()
+                self.refreshDisk()
+                self.scanDeepClean()
+                
+                if success {
+                    self.alertMessage = self.language == .english
+                        ? "pnpm store pruned successfully! Unused packages removed."
+                        : "Store do pnpm podada com sucesso! Pacotes não referenciados foram removidos."
+                } else {
+                    self.alertMessage = self.language == .english
+                        ? "Failed to prune pnpm store: \(output)"
+                        : "Falha ao podar store do pnpm: \(output)"
+                }
             }
         }
     }
